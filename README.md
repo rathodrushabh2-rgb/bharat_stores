@@ -45,5 +45,5 @@ Database setup: run `db/schema.sql` once on the database (it is safe to run agai
 | Name | Needed | What |
 |------|--------|------|
 | `DATABASE_URL` | yes | Neon pooled connection string |
-| `SESSION_SECRET` | yes | 64-character random string (`openssl rand -hex 32`) |
+| `SESSION_SECRET` | optional | Random string for signing logins (`openssl rand -hex 32`); derived from `DATABASE_URL` if unset |
 | `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` | optional | WhatsApp Cloud API webhook |
