@@ -50,6 +50,10 @@ export async function saveSettings(_: ActionResult, fd: FormData): Promise<Actio
   const values = [
     ...SETTING_KEYS.map((k) => [k, String(fd.get(k) ?? "").trim()] as const),
     ["staff_can_edit_rate", fd.get("staff_can_edit_rate") === "on" ? "1" : "0"] as const,
+    ...(["quiet_from", "quiet_to"] as const).map((k) => {
+      const n = Number(fd.get(k));
+      return [k, Number.isInteger(n) && n >= 0 && n <= 23 ? String(n) : k === "quiet_from" ? "23" : "9"] as const;
+    }),
     ...(["small_qty_extra", "small_qty_upto_g"] as const).map((k) => {
       const n = Number(fd.get(k));
       return [k, Number.isFinite(n) && n >= 0 ? String(n) : k === "small_qty_extra" ? "4" : "250"] as const;

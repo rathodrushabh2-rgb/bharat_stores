@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { Icon, type IconName } from "@/components/Icon";
 import { LangToggle } from "@/components/LangToggle";
+import { PushToggle } from "@/components/PushToggle";
 import { changeMyPin, logout } from "@/app/actions/auth";
 import { requireUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
@@ -23,6 +24,7 @@ export default async function MorePage() {
   ];
   return (
     <div className="space-y-4">
+      <PushToggle lang={lang} />
       <div className="card p-0">
         {items
           .filter((i) => i.show)

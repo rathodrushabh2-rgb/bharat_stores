@@ -2,7 +2,8 @@
 
 ## How printing works
 1. The owner makes a bill on his phone from anywhere.
-2. The shop phone (logged in as staff, on the **ऑर्डर** screen) beeps: *नया ऑर्डर आया है!*
+2. The shop phone (logged in as staff, new-order alerts turned on) gets a notification:
+   *नया ऑर्डर #130 · …*. Tapping it opens the bill.
 3. Staff tap **प्रिंट** → **Print / प्रिंट** → choose the printer → **Print**.
 4. Staff pack, tap **पैक हो गया**, deliver, tap **दे दिया**.
 

@@ -13,7 +13,7 @@ Works on any phone browser (Hindi + English) and can be added to the home screen
 | Who | What they do |
 |-----|--------------|
 | **Owner (outside the shop)** | Home → **+ नया बिल** → choose customer → add items → payment (नकद / UPI / उधार / थोड़ा जमा) → Save. |
-| **Staff at the shop** | Keep the app open on the shop phone or PC. A new bill **beeps** and shows *नया ऑर्डर आया है!* → open it → **प्रिंट** (Hindi bill) → pack → **पैक हो गया** → deliver → **दे दिया**. |
+| **Staff at the shop** | Turn on **new order alerts** once on the shop phone (banner at the top, or menu → alerts). Every new bill rings the phone like a message, even when locked. Tap it → **प्रिंट** → pack → **पैक हो गया** → deliver → **दे दिया**. As a backup the app also checks every 10 minutes (not 11 PM–9 AM, changeable in Settings) and whenever it is opened. |
 | **Customer pays udhaar** | Customers → customer → **पैसे मिले** → amount → Save. |
 | **Change prices** (owner) | Products → **₹ भाव बदलें** → edit prices → Save. Every change is kept in history. |
 | **Update many prices from Excel** (owner) | Products → **⬆️ रेट लिस्ट अपलोड** → download the current list → change prices / add rows in Excel → upload (.xlsx or .csv) → check the preview → **बदलाव लागू करें**. Rows are matched by ID, else by English name. |

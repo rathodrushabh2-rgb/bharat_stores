@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { requireOwner, requireUser } from "@/lib/auth";
 import { auditQuery, getSettings, num, round2, round3, sql } from "@/lib/db";
 import { hiName } from "@/lib/i18n";
 import { lineAmount, ruleFromSettings, smallQtyExtra } from "@/lib/pricing";
+import { notify } from "@/lib/push";
 
 export type BillInput = {
   customerId: number | null;
@@ -165,7 +167,20 @@ export async function createBill(input: BillInput): Promise<{ error: string } | 
 
   revalidatePath("/bills");
   revalidatePath("/");
-  return { id: (results[0] as any[])[0].id };
+  const bill = (results[0] as any[])[0];
+  // Tell the shop phones right away; runs after the response so saving is never slowed down.
+  after(() =>
+    notify(
+      {
+        title: `नया ऑर्डर #${bill.bill_no} / New order`,
+        body: `${cust?.name ?? "नकद ग्राहक"} · ₹${total} · ${items.length} सामान${delivery === "home" ? " · घर पहुँचाना" : ""}`,
+        url: `/bills/${bill.id}`,
+        tag: `bill-${bill.id}`,
+      },
+      { except: me.id },
+    ).catch((e) => console.error("push failed", e)),
+  );
+  return { id: bill.id };
 }
 
 const NEXT: Record<string, string> = { packed: "new", delivered: "packed" };

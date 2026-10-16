@@ -148,6 +148,16 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 CREATE INDEX IF NOT EXISTS audit_log_created_idx ON audit_log (created_at DESC);
 
+-- Phones that get a notification when a new order is made.
+CREATE TABLE IF NOT EXISTS push_subs (
+  id          SERIAL PRIMARY KEY,
+  user_id     INT NOT NULL REFERENCES users(id),
+  endpoint    TEXT NOT NULL UNIQUE,
+  p256dh      TEXT NOT NULL,
+  auth        TEXT NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 INSERT INTO settings (key, value) VALUES
   ('shop_name', 'Bharat Stores'),
   ('shop_name_hi', 'भारत स्टोर्स'),
@@ -157,5 +167,7 @@ INSERT INTO settings (key, value) VALUES
   ('bill_footer', 'धन्यवाद! फिर पधारें।'),
   ('staff_can_edit_rate', '0'),
   ('small_qty_extra', '4'),
-  ('small_qty_upto_g', '250')
+  ('small_qty_upto_g', '250'),
+  ('quiet_from', '23'),
+  ('quiet_to', '9')
 ON CONFLICT (key) DO NOTHING;
