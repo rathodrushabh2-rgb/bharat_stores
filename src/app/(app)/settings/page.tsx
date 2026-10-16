@@ -32,6 +32,19 @@ export default async function SettingsPage() {
           <input type="checkbox" name="staff_can_edit_rate" defaultChecked={s.staff_can_edit_rate === "1"} className="h-5 w-5" />
           {t("staffCanEditRate")}
         </label>
+        <fieldset className="space-y-2 rounded-lg bg-stone-50 p-3">
+          <legend className="text-sm font-semibold">{t("smallQtyRule")}</legend>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">{t("smallQtyExtraLabel")}</label>
+              <input name="small_qty_extra" type="number" step="0.01" min="0" inputMode="decimal" className="input" defaultValue={s.small_qty_extra ?? "4"} />
+            </div>
+            <div>
+              <label className="label">{t("smallQtyUptoLabel")}</label>
+              <input name="small_qty_upto_g" type="number" step="1" min="0" inputMode="numeric" className="input" defaultValue={s.small_qty_upto_g ?? "250"} />
+            </div>
+          </div>
+        </fieldset>
         <SubmitButton>{t("save")}</SubmitButton>
       </ActionForm>
     </div>

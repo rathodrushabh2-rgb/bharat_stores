@@ -4,12 +4,18 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { createBill, getLastRates, type BillInput, type LastRates } from "@/app/actions/bills";
 import { money, qty as fmtQty } from "@/lib/format";
-import { pname, SMALL_UNIT, translator, unitLabel, type Lang } from "@/lib/i18n";
+import { pname, qtyUnit, SMALL_UNIT, translator, unitLabel, type Lang } from "@/lib/i18n";
+import { lineAmount, qtyForAmount, smallQtyExtra, type SmallQtyRule } from "@/lib/pricing";
 
 type Product = { id: number; name: string; name_hi: string | null; unit: string; price: number; stock: number };
 type Customer = { id: number; name: string; phone: string | null; address: string | null; area: string | null; due: number };
-/** qty is always in the product's own unit (kg, litre, pcs…); `small` only changes how it is typed (g, ml). */
-type Line = { productId: number; qty: number; price: number; small: boolean };
+/**
+ * qty is always in the product's own unit (kg, litre, pcs…); `small` only changes how it is typed (g, ml).
+ * price is the base rate (the small-quantity extra is added on top).
+ * byAmount: quantity is entered as money (typed) and the weight is worked out.
+ * override: amount typed by hand for this line; the weight stays as it is.
+ */
+type Line = { productId: number; qty: number; price: number; small: boolean; byAmount: boolean; typed: number | null; override: number | null };
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
@@ -23,6 +29,7 @@ export function BillForm({
   customers,
   isOwner,
   canEditRate,
+  rule,
   lang,
   initialCustomerId,
   wa,
@@ -31,6 +38,7 @@ export function BillForm({
   customers: Customer[];
   isOwner: boolean;
   canEditRate: boolean;
+  rule: SmallQtyRule;
   lang: Lang;
   initialCustomerId?: number | null;
   wa?: { id: number; body: string; from_name: string | null; from_phone: string | null } | null;
@@ -70,15 +78,22 @@ export function BillForm({
 
   const rateFor = (p: Product, useOld: boolean) => (useOld && lastRates[p.id] ? lastRates[p.id].price : p.price);
 
+  /** New base rate for a line; a "weigh by ₹" line keeps its money and re-works the weight. */
+  const withPrice = (l: Line, price: number): Line => {
+    const p = productById.get(l.productId)!;
+    const qty = l.byAmount && l.typed ? qtyForAmount(l.typed, price, p.unit, rule) : l.qty;
+    return { ...l, price, qty, override: null };
+  };
+
   function setOldRates(on: boolean) {
     setOldOn(on);
-    setLines((ls) => ls.map((l) => ({ ...l, price: rateFor(productById.get(l.productId)!, on) })));
+    setLines((ls) => ls.map((l) => withPrice(l, rateFor(productById.get(l.productId)!, on))));
   }
 
   function changeCustomer(id: number | null) {
     if (oldOn) {
       setOldOn(false);
-      setLines((ls) => ls.map((l) => ({ ...l, price: productById.get(l.productId)!.price })));
+      setLines((ls) => ls.map((l) => withPrice(l, productById.get(l.productId)!.price)));
     }
     setCustomerId(id);
   }
@@ -95,12 +110,32 @@ export function BillForm({
   function addProduct(p: Product) {
     setLines((ls) => {
       const i = ls.findIndex((l) => l.productId === p.id);
-      if (i >= 0) return ls.map((l, j) => (j === i ? { ...l, qty: round3(l.qty + (l.small ? 0.1 : 1)) } : l));
-      return [...ls, { productId: p.id, qty: 1, price: rateFor(p, oldOn), small: false }];
+      if (i >= 0) return ls.map((l, j) => (j === i ? { ...l, qty: round3(l.qty + (l.small ? 0.1 : 1)), byAmount: false, typed: null, override: null } : l));
+      return [...ls, { productId: p.id, qty: 1, price: rateFor(p, oldOn), small: false, byAmount: false, typed: null, override: null }];
     });
     setProdQ("");
   }
   const updateLine = (i: number, patch: Partial<Line>) => setLines((ls) => ls.map((l, j) => (j === i ? { ...l, ...patch } : l)));
+  /** Typed quantity: leaves "weigh by ₹" and drops any manual amount. */
+  const setQty = (i: number, qty: number) => updateLine(i, { qty, typed: null, override: null });
+  const setPrice = (i: number, price: number) => setLines((ls) => ls.map((l, j) => (j === i ? withPrice(l, price) : l)));
+  const setTyped = (i: number, money: number) =>
+    setLines((ls) =>
+      ls.map((l, j) => {
+        if (j !== i) return l;
+        const p = productById.get(l.productId)!;
+        return { ...l, typed: money || null, qty: qtyForAmount(money, l.price, p.unit, rule), override: null };
+      }),
+    );
+
+  /** Effective rate (with small-quantity extra) and amount of a line. */
+  const calc = (l: Line) => {
+    const p = productById.get(l.productId)!;
+    const extra = smallQtyExtra(p.unit, l.qty || 0, rule);
+    const rate = round2(l.price + extra);
+    const auto = lineAmount(l.qty || 0, rate, l.byAmount ? l.typed : null);
+    return { extra, rate, auto, amount: l.override ?? auto };
+  };
   const removeLine = (i: number) => setLines((ls) => ls.filter((_, j) => j !== i));
 
   // Totals & payment
@@ -109,7 +144,7 @@ export function BillForm({
   const [paid, setPaid] = useState(0);
   const [delivery, setDelivery] = useState<BillInput["delivery"]>(wa ? "home" : "pickup");
   const [notes, setNotes] = useState("");
-  const subtotal = round2(lines.reduce((s, l) => s + round2((l.qty || 0) * l.price), 0));
+  const subtotal = round2(lines.reduce((s, l) => s + calc(l).amount, 0));
   const total = round2(subtotal - (canEditRate ? discount : 0));
   const hasCustomer = !!customerId || (showNew && nc.name.trim() !== "");
 
@@ -121,7 +156,13 @@ export function BillForm({
       const res = await createBill({
         customerId,
         newCustomer: !customerId && showNew ? nc : null,
-        items: lines.map((l) => ({ productId: l.productId, qty: round3(l.qty), price: l.price })),
+        items: lines.map((l) => ({
+          productId: l.productId,
+          qty: round3(l.qty),
+          price: l.price,
+          amount: l.override ?? (l.byAmount ? l.typed : null),
+          amountOverride: l.override !== null,
+        })),
         discount,
         paymentMode: mode,
         paid,
@@ -238,8 +279,10 @@ export function BillForm({
           const step = l.small ? 50 : 1;
           const last = lastRates[p.id];
           const changed = l.price !== p.price;
+          const { extra, rate, auto, amount } = calc(l);
+          const overridden = l.override !== null;
           return (
-            <div key={l.productId} className={`rounded-lg border p-2.5 ${changed ? "border-purple-300 bg-purple-50/40" : "border-stone-200"}`}>
+            <div key={l.productId} className={`rounded-lg border p-2.5 ${changed || overridden ? "border-purple-300 bg-purple-50/40" : "border-stone-200"}`}>
               <div className="flex items-start justify-between">
                 <div>
                   <div className="font-semibold">{pname(p, lang)}</div>
@@ -249,67 +292,123 @@ export function BillForm({
                   ✕
                 </button>
               </div>
+
+              {/* Quantity: typed as weight, or as money for loose goods */}
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <button className="btn-secondary btn-sm w-9" onClick={() => updateLine(i, { qty: Math.max(0, round3((shown - step) / factor)) })}>
-                  −
-                </button>
-                <input
-                  className="input w-20 px-1 text-center"
-                  type="number"
-                  inputMode="decimal"
-                  step={l.small ? 1 : 0.001}
-                  min="0"
-                  value={Number.isFinite(shown) ? shown : ""}
-                  onChange={(e) => updateLine(i, { qty: round3(Number(e.target.value) / factor) })}
-                />
-                <button className="btn-secondary btn-sm w-9" onClick={() => updateLine(i, { qty: round3((shown + step) / factor) })}>
-                  +
-                </button>
+                {l.byAmount ? (
+                  <>
+                    <span className="text-lg font-semibold">₹</span>
+                    <input
+                      className="input w-24 px-2 text-center"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      placeholder={t("amount")}
+                      value={l.typed ?? ""}
+                      onChange={(e) => setTyped(i, Number(e.target.value))}
+                      aria-label="amount in rupees"
+                    />
+                    <span className="text-sm font-semibold text-green-700">= {qtyUnit(l.qty, p.unit, lang)}</span>
+                  </>
+                ) : (
+                  <>
+                    <button className="btn-secondary btn-sm w-9" onClick={() => setQty(i, Math.max(0, round3((shown - step) / factor)))}>
+                      −
+                    </button>
+                    <input
+                      className="input w-20 px-1 text-center"
+                      type="number"
+                      inputMode="decimal"
+                      step={l.small ? 1 : 0.001}
+                      min="0"
+                      value={Number.isFinite(shown) ? shown : ""}
+                      onChange={(e) => setQty(i, round3(Number(e.target.value) / factor))}
+                      aria-label="quantity"
+                    />
+                    <button className="btn-secondary btn-sm w-9" onClick={() => setQty(i, round3((shown + step) / factor))}>
+                      +
+                    </button>
+                  </>
+                )}
                 {smallUnit ? (
-                  // Tap to switch between kg and grams (or litre and ml); the quantity stays the same.
+                  // kg / grams / ₹ : how the quantity is typed. The quantity itself stays the same.
                   <div className="flex overflow-hidden rounded-lg ring-1 ring-stone-300">
-                    {[false, true].map((sm) => (
-                      <button
-                        key={String(sm)}
-                        className={`px-2 py-1.5 text-sm ${l.small === sm ? "bg-stone-800 text-white" : "bg-white"}`}
-                        onClick={() => updateLine(i, { small: sm })}
-                      >
-                        {unitLabel(sm ? smallUnit : p.unit, lang)}
-                      </button>
-                    ))}
+                    {(["big", "small", "money"] as const).map((m) => {
+                      const active = m === "money" ? l.byAmount : !l.byAmount && l.small === (m === "small");
+                      return (
+                        <button
+                          key={m}
+                          className={`px-2 py-1.5 text-sm ${active ? "bg-stone-800 text-white" : "bg-white"}`}
+                          onClick={() =>
+                            m === "money"
+                              ? updateLine(i, { byAmount: true, typed: l.typed ?? (amount || null) })
+                              : updateLine(i, { byAmount: false, typed: null, small: m === "small" })
+                          }
+                        >
+                          {m === "money" ? "₹" : unitLabel(m === "small" ? smallUnit : p.unit, lang)}
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : (
                   <span className="text-sm text-stone-500">{unitLabel(p.unit, lang)}</span>
                 )}
               </div>
+
+              {/* Rate and amount */}
               <div className="mt-2 flex items-center gap-2 text-sm">
                 <span className="text-stone-500">
                   {t("rate")} /{unitLabel(p.unit, lang)}
                 </span>
                 {canEditRate ? (
                   <input
-                    className={`input w-24 px-2 py-1.5 text-right ${changed ? "border-purple-400 font-semibold text-purple-800" : ""}`}
+                    className={`input w-20 px-2 py-1.5 text-right ${changed ? "border-purple-400 font-semibold text-purple-800" : ""}`}
                     type="number"
                     inputMode="decimal"
                     step="0.01"
                     min="0"
                     value={l.price}
-                    onChange={(e) => updateLine(i, { price: Number(e.target.value) })}
+                    onChange={(e) => setPrice(i, Number(e.target.value))}
+                    aria-label="rate"
                   />
                 ) : (
                   <span title={t("priceLocked")}>{money(l.price)} 🔒</span>
                 )}
-                <span className="ml-auto text-base font-bold">{money(round2((l.qty || 0) * l.price))}</span>
+                <span className="ml-auto text-stone-500">₹</span>
+                {canEditRate ? (
+                  <input
+                    className={`input w-24 px-2 py-1.5 text-right text-base font-bold ${overridden ? "border-purple-400 text-purple-800" : ""}`}
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    min="0"
+                    value={amount}
+                    onChange={(e) => updateLine(i, { override: e.target.value === "" ? 0 : Number(e.target.value) })}
+                    aria-label="line amount"
+                  />
+                ) : (
+                  <span className="text-base font-bold">{money(amount)}</span>
+                )}
               </div>
-              {(changed || (last && last.price !== l.price)) && (
+              {(changed || overridden || extra > 0 || (last && last.price !== l.price)) && (
                 <div className="mt-1 flex flex-wrap gap-x-3 text-xs">
+                  {extra > 0 && (
+                    <span className="text-amber-700">
+                      +{money(extra)}/{unitLabel(p.unit, lang)} {t("smallQtyExtra")} = {money(rate)}
+                    </span>
+                  )}
+                  {overridden && (
+                    <button className="text-purple-700 underline" onClick={() => updateLine(i, { override: null })}>
+                      {t("amountChanged")} · {money(auto)}
+                    </button>
+                  )}
                   {changed && (
-                    <button className="text-purple-700 underline" onClick={() => updateLine(i, { price: p.price })}>
+                    <button className="text-purple-700 underline" onClick={() => setPrice(i, p.price)}>
                       {t("listRate")}: {money(p.price)}
                     </button>
                   )}
                   {last && last.price !== l.price && (
-                    <button className="text-purple-700 underline" onClick={() => updateLine(i, { price: last.price })}>
+                    <button className="text-purple-700 underline" onClick={() => setPrice(i, last.price)}>
                       {t("lastRate")}: {money(last.price)} ({t("billLabel")} #{last.bill_no})
                     </button>
                   )}

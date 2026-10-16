@@ -18,6 +18,9 @@ Works on any phone browser (Hindi + English) and can be added to the home screen
 | **Update many prices from Excel** (owner) | Products → **⬆️ रेट लिस्ट अपलोड** → download the current list → change prices / add rows in Excel → upload (.xlsx or .csv) → check the preview → **बदलाव लागू करें**. Rows are matched by ID, else by English name. |
 | **Hindi names** | Type the English name; the Hindi name fills itself (dictionary of grocery words + phonetic spelling). Correct it if needed. "बाकी हिंदी नाम भरें" fills old products. |
 | **Grams** | On a bill, tap **ग्राम** next to a KG item and type 300 for 300 g (same for ml). |
+| **"₹30 ki cheeni"** | Tap **₹** next to a KG item and type the money; the weight is worked out. |
+| **Small quantity charge** | KG items of 250 g or less cost ₹4/kg more (both changeable in Settings). Applies to "by ₹" too. |
+| **Change a line amount** | Type a different amount in the line's ₹ box (owner; staff only if allowed). The weight stays the same; it is marked and logged. |
 | **Special rates** | On a bill, the rate box can be changed (owner; staff only if allowed in Settings). **पुराने भाव लगाएं** uses the rate this customer paid on their most recent bill for each item. |
 | **Goods arrive** | Products → item → **माल आया** → quantity. |
 | **Old notebook dues** (owner) | Customer → **बकाया सुधारें / पुराना उधार** → + amount → reason. |

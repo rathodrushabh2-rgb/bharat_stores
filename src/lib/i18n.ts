@@ -175,6 +175,11 @@ const en = {
   listRate: "List",
   staffCanEditRate: "Staff can change rates on bills",
   billLabel: "Bill",
+  smallQtyExtra: "small quantity",
+  amountChanged: "Amount changed — tap for calculated",
+  smallQtyRule: "Small quantity charge (KG items)",
+  smallQtyExtraLabel: "Extra ₹ per kg",
+  smallQtyUptoLabel: "When quantity is up to (grams)",
 };
 
 export type Key = keyof typeof en;
@@ -346,6 +351,11 @@ const hi: Record<Key, string> = {
   listRate: "लिस्ट",
   staffCanEditRate: "स्टाफ़ बिल में भाव बदल सकता है",
   billLabel: "बिल",
+  smallQtyExtra: "कम मात्रा",
+  amountChanged: "रकम बदली — असली रकम के लिए दबाएं",
+  smallQtyRule: "कम मात्रा पर ज़्यादा भाव (किलो वाला सामान)",
+  smallQtyExtraLabel: "हर किलो पर ₹ ज़्यादा",
+  smallQtyUptoLabel: "जब मात्रा इतने ग्राम या कम हो",
 };
 
 export const dict: Record<Lang, Record<Key, string>> = { en, hi };

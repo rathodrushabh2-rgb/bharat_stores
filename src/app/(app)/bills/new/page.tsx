@@ -2,6 +2,7 @@ import { BillForm } from "@/components/BillForm";
 import { requireUser } from "@/lib/auth";
 import { getSettings, num, sql } from "@/lib/db";
 import { waPhone } from "@/lib/format";
+import { ruleFromSettings } from "@/lib/pricing";
 import { getT } from "@/lib/lang";
 
 export default async function NewBillPage({ searchParams }: { searchParams: Promise<{ customer?: string; wa?: string }> }) {
@@ -30,6 +31,7 @@ export default async function NewBillPage({ searchParams }: { searchParams: Prom
         customers={customers.map((c) => ({ id: c.id, name: c.name, phone: c.phone, address: c.address, area: c.area, due: num(c.due) }))}
         isOwner={user.role === "owner"}
         canEditRate={user.role === "owner" || settings.staff_can_edit_rate === "1"}
+        rule={ruleFromSettings(settings)}
         lang={lang}
         initialCustomerId={initialCustomerId}
         wa={wa as any}

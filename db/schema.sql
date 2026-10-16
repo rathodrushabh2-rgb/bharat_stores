@@ -95,6 +95,8 @@ CREATE INDEX IF NOT EXISTS bill_items_product_idx ON bill_items (product_id);
 -- Master price at billing time; differs from price when the rate was overridden.
 ALTER TABLE bill_items ADD COLUMN IF NOT EXISTS list_price NUMERIC(12,2);
 ALTER TABLE products ALTER COLUMN unit SET DEFAULT 'kg';
+-- Extra ₹/kg added for small quantities (rate = base rate + small_qty_extra).
+ALTER TABLE bill_items ADD COLUMN IF NOT EXISTS small_qty_extra NUMERIC(12,2) NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS stock_moves (
   id          SERIAL PRIMARY KEY,
@@ -153,5 +155,7 @@ INSERT INTO settings (key, value) VALUES
   ('shop_phone', ''),
   ('gstin', ''),
   ('bill_footer', 'धन्यवाद! फिर पधारें।'),
-  ('staff_can_edit_rate', '0')
+  ('staff_can_edit_rate', '0'),
+  ('small_qty_extra', '4'),
+  ('small_qty_upto_g', '250')
 ON CONFLICT (key) DO NOTHING;
