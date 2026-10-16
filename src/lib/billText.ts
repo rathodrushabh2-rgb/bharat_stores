@@ -1,6 +1,6 @@
 import { num, type Row } from "./db";
 import { date, money } from "./format";
-import { qtyUnit, unitLabel } from "./i18n";
+import { hiName, qtyUnit } from "./i18n";
 
 /** Hindi plain-text bill for WhatsApp. */
 export function billText(b: Row, items: Row[], settings: Record<string, string>) {
@@ -11,7 +11,7 @@ export function billText(b: Row, items: Row[], settings: Record<string, string>)
     "",
     ...items.map(
       (i) =>
-        `${i.name_hi || i.name}${i.name_hi ? ` (${i.name})` : ""}\n   ${qtyUnit(i.qty, i.unit, "hi")} × ${money(i.price)}/${unitLabel(i.unit, "hi")} = ${money(i.amount)}`,
+        `${hiName(i)} (${i.name})\n   ${qtyUnit(i.qty, i.unit, "hi")} = ${money(i.amount)}`,
     ),
     "",
     num(b.discount) > 0 ? `छूट / Discount: ${money(b.discount)}` : "",

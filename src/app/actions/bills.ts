@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireOwner, requireUser } from "@/lib/auth";
 import { auditQuery, getSettings, num, round2, round3, sql } from "@/lib/db";
+import { hiName } from "@/lib/i18n";
 
 export type BillInput = {
   customerId: number | null;
@@ -63,7 +64,7 @@ export async function createBill(input: BillInput): Promise<{ error: string } | 
     const listPrice = num(p.price);
     const wanted = Number.isFinite(l.price) && l.price >= 0 ? round2(l.price) : listPrice;
     const price = canEditRate || wanted === lastRates[p.id]?.price ? wanted : listPrice;
-    items.push({ product_id: p.id, name: p.name, name_hi: p.name_hi, unit: p.unit, qty, price, list_price: listPrice, amount: round2(qty * price) });
+    items.push({ product_id: p.id, name: p.name, name_hi: hiName(p), unit: p.unit, qty, price, list_price: listPrice, amount: round2(qty * price) });
   }
 
   const subtotal = round2(items.reduce((s, i) => s + i.amount, 0));

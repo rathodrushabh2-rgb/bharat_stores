@@ -3,7 +3,7 @@ import { PrintControls } from "@/components/PrintControls";
 import { requireUser } from "@/lib/auth";
 import { getSettings, num, sql } from "@/lib/db";
 import { dateTime, money } from "@/lib/format";
-import { qtyUnit, translator, unitLabel, type Key } from "@/lib/i18n";
+import { hiName, qtyUnit, translator, type Key } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -72,12 +72,6 @@ export default async function PrintBill({ params, searchParams }: { params: Prom
                 {hi("qty")}
                 <div className="text-[0.85em] font-normal">{en("qty")}</div>
               </th>
-              {!small && (
-                <th className="text-right font-semibold">
-                  {hi("rate")}
-                  <div className="text-[0.85em] font-normal">{en("rate")}</div>
-                </th>
-              )}
               <th className="text-right font-semibold">
                 {hi("amount")}
                 <div className="text-[0.85em] font-normal">{en("amount")}</div>
@@ -88,23 +82,13 @@ export default async function PrintBill({ params, searchParams }: { params: Prom
             {items.map((i) => (
               <tr key={i.id} className="border-t border-dotted border-stone-400 align-top">
                 <td className="py-0.5">
-                  <div className="font-semibold">{i.name_hi || i.name}</div>
-                  {i.name_hi && <div className="text-[0.85em]">{i.name}</div>}
-                  {small && (
-                    <div className="text-[0.8em]">
-                      @{money(i.price)}/{unitLabel(i.unit, "hi")}
-                    </div>
-                  )}
+                  <div className="font-semibold">{hiName(i)}</div>
+                  <div className="text-[0.85em]">{i.name}</div>
                 </td>
                 <td className="whitespace-nowrap py-0.5 text-right">
                   {qtyUnit(i.qty, i.unit, "hi")}
                   <div className="text-[0.85em]">{qtyUnit(i.qty, i.unit, "en")}</div>
                 </td>
-                {!small && (
-                  <td className="py-0.5 text-right">
-                    {money(i.price)}/{unitLabel(i.unit, "hi")}
-                  </td>
-                )}
                 <td className="py-0.5 text-right">{money(i.amount)}</td>
               </tr>
             ))}

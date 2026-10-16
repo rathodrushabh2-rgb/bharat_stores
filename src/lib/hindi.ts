@@ -79,7 +79,7 @@ const WORDS: Record<string, string> = {
   // brands
   tata: "टाटा", aashirvaad: "आशीर्वाद", ashirvad: "आशीर्वाद", aashirvad: "आशीर्वाद", fortune: "फॉर्च्यून",
   parle: "पारले", britannia: "ब्रिटानिया", amul: "अमूल", patanjali: "पतंजलि", dabur: "डाबर", everest: "एवरेस्ट",
-  mdh: "एमडीएच", catch: "कैच", saffola: "सफोला", dhara: "धारा", maggi: "मैगी", haldiram: "हल्दीराम",
+  mdh: "एमडीएच", maggie: "मैगी", catch: "कैच", saffola: "सफोला", dhara: "धारा", maggi: "मैगी", haldiram: "हल्दीराम",
   haldirams: "हल्दीराम", surf: "सर्फ", excel: "एक्सेल", nirma: "निरमा", wheel: "व्हील", tide: "टाइड",
   rin: "रिन", ariel: "एरियल", lux: "लक्स", lifebuoy: "लाइफबॉय", dettol: "डेटॉल", colgate: "कोलगेट",
   pepsodent: "पेप्सोडेंट", closeup: "क्लोज़अप", vim: "विम", harpic: "हार्पिक", lizol: "लाइज़ोल",

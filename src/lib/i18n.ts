@@ -1,3 +1,5 @@
+import { toHindi } from "./hindi";
+
 export type Lang = "hi" | "en";
 export const LANG_COOKIE = "lang";
 
@@ -370,9 +372,14 @@ export function unitLabel(unit: string, lang: Lang) {
   return UNITS[unit]?.[lang] ?? unit;
 }
 
-/** Product name in the chosen language, falling back to English. */
+/** Hindi name of a product or bill line; worked out from the English name when none was saved. */
+export function hiName(p: { [k: string]: any }): string {
+  return (typeof p.name_hi === "string" && p.name_hi.trim()) || toHindi(p.name ?? "");
+}
+
+/** Product name in the chosen language. */
 export function pname(p: { [k: string]: any }, lang: Lang): string {
-  return lang === "hi" && p.name_hi ? p.name_hi : p.name;
+  return lang === "hi" ? hiName(p) : p.name;
 }
 
 /** Units that can also be entered/shown in thousandths (kg ↔ g, litre ↔ ml). */
