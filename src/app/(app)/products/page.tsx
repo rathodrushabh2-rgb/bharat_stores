@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
+import { Icon } from "@/components/Icon";
 import { fillMissingHindi } from "@/app/actions/products";
 import { getUser } from "@/lib/auth";
 import { num, sql } from "@/lib/db";
-import { money, qty } from "@/lib/format";
-import { pname, unitLabel } from "@/lib/i18n";
+import { money } from "@/lib/format";
+import { pname, qtyUnit, unitLabel } from "@/lib/i18n";
 import { getT } from "@/lib/lang";
 
 export default async function ProductsPage({ searchParams }: { searchParams: Promise<{ q?: string; low?: string }> }) {
@@ -23,19 +24,21 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       <div className="flex items-center justify-between">
         <h1 className="h1">{t("products")}</h1>
         {user.role === "owner" && (
-          <div className="flex flex-wrap justify-end gap-2">
-            <Link href="/products/prices" className="btn-secondary btn-sm">
-              ₹ {t("priceList")}
-            </Link>
-            <Link href="/products/upload" className="btn-secondary btn-sm">
-              ⬆️ {t("uploadRates")}
-            </Link>
-            <Link href="/products/new" className="btn-primary btn-sm">
-              + {t("add")}
-            </Link>
-          </div>
+          <Link href="/products/new" className="btn-primary btn-sm">
+            <Icon name="plus" size={18} /> {t("add")}
+          </Link>
         )}
       </div>
+      {user.role === "owner" && (
+        <div className="grid grid-cols-2 gap-2">
+          <Link href="/products/prices" className="btn-secondary btn-sm min-h-[44px]">
+            <Icon name="tag" size={18} className="text-purple-600" /> {t("priceList")}
+          </Link>
+          <Link href="/products/upload" className="btn-secondary btn-sm min-h-[44px]">
+            <Icon name="upload" size={18} className="text-blue-600" /> {t("uploadRates")}
+          </Link>
+        </div>
+      )}
       {user.role === "owner" && missing > 0 && (
         <ActionForm action={fillMissingHindi}>
           <SubmitButton className="btn-secondary btn-sm w-full">
@@ -43,16 +46,19 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
           </SubmitButton>
         </ActionForm>
       )}
-      <form className="flex gap-2">
-        <input name="q" defaultValue={q} placeholder={t("searchProducts")} className="input" />
-        <button className="btn-secondary">{t("search")}</button>
+      <form>
+        {low && <input type="hidden" name="low" value="1" />}
+        <label className="input flex items-center gap-2">
+          <Icon name="search" size={20} className="shrink-0 text-muted" />
+          <input name="q" defaultValue={q} placeholder={t("searchProducts")} className="w-full bg-transparent outline-none" />
+        </label>
       </form>
       <div className="flex gap-2 text-sm">
-        <Link href="/products" className={`badge ${!low ? "bg-brand-600 text-white" : "bg-white ring-1 ring-stone-300"}`}>
+        <Link href="/products" className={`chip ${!low ? "!bg-ink text-white ring-ink" : ""}`}>
           {t("all")}
         </Link>
-        <Link href="/products?low=1" className={`badge ${low ? "bg-red-600 text-white" : "bg-white ring-1 ring-stone-300"}`}>
-          ⚠ {t("onlyLow")}
+        <Link href="/products?low=1" className={`chip ${low ? "!bg-red-600 text-white ring-red-600" : ""}`}>
+          <Icon name="alert" size={16} /> {t("onlyLow")}
         </Link>
       </div>
       <div className="card p-0">
@@ -70,7 +76,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                   {money(p.price)} <span className="muted">/{unitLabel(p.unit, lang)}</span>
                 </div>
                 <div className={`text-sm ${isLow ? "font-bold text-red-600" : "text-stone-500"}`}>
-                  {t("stock")}: {qty(p.stock)}
+                  {t("stock")}: {qtyUnit(p.stock, p.unit, lang)}
                 </div>
               </div>
             </Link>

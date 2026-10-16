@@ -5,6 +5,7 @@ Works on any phone browser (Hindi + English) and can be added to the home screen
 
 * Design & architecture: [docs/DESIGN.md](docs/DESIGN.md)
 * WhatsApp setup: [docs/WHATSAPP.md](docs/WHATSAPP.md)
+* Printer (which one, how to connect): [docs/PRINTER.md](docs/PRINTER.md)
 * Database tables: [db/schema.sql](db/schema.sql)
 
 ## How the shop uses it
@@ -29,8 +30,8 @@ Works on any phone browser (Hindi + English) and can be added to the home screen
 First visit after deployment: open `/setup` to create the owner login (username + 4–6 digit PIN).
 Then add staff from **More → स्टाफ़ / यूज़र**.
 
-Printing: the print page supports 58mm/80mm thermal printers and A5/A4 paper. On Android, a Bluetooth
-thermal printer works through its print-service app (e.g. "RawBT") using the normal Print button.
+Printing: see [docs/PRINTER.md](docs/PRINTER.md). Recommended: a WiFi laser printer and the
+**A4 · 2 कॉपी** print size (customer copy + shop copy; udhaar bills get a signature line).
 
 ## Tech
 

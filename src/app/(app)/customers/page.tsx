@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Icon } from "@/components/Icon";
 import { num, sql } from "@/lib/db";
 import { money } from "@/lib/format";
 import { getT } from "@/lib/lang";
@@ -17,22 +18,27 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       <div className="flex items-center justify-between">
         <h1 className="h1">{t("customers")}</h1>
         <Link href="/customers/new" className="btn-primary btn-sm">
-          + {t("add")}
+          <Icon name="plus" size={18} /> {t("add")}
         </Link>
       </div>
-      <form className="flex gap-2">
-        <input name="q" defaultValue={q} placeholder={t("searchCustomers")} className="input" />
-        <button className="btn-secondary">{t("search")}</button>
+      <form>
+        <label className="input flex items-center gap-2">
+          <Icon name="search" size={20} className="shrink-0 text-muted" />
+          <input name="q" defaultValue={q} placeholder={t("searchCustomers")} className="w-full bg-transparent outline-none" />
+        </label>
       </form>
       <div className="card p-0">
         {rows.length === 0 && <p className="muted p-4">{t("none")}</p>}
         {rows.map((c) => (
           <Link key={c.id} href={`/customers/${c.id}`} className="list-row px-4">
-            <div>
-              <div className="font-semibold">{c.name}</div>
-              <div className="muted">{[c.phone, c.area].filter(Boolean).join(" · ")}</div>
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-100 font-bold text-brand-700">{c.name.trim().charAt(0)}</span>
+              <div className="min-w-0">
+                <div className="truncate font-semibold">{c.name}</div>
+                <div className="muted truncate">{[c.phone, c.area].filter(Boolean).join(" · ")}</div>
+              </div>
             </div>
-            {num(c.due) > 0 && <div className="font-bold text-red-600">{money(c.due)}</div>}
+            {num(c.due) > 0 && <div className="amount text-lg text-red-600">{money(c.due)}</div>}
             {num(c.due) < 0 && <div className="font-semibold text-green-700">+{money(-num(c.due))}</div>}
           </Link>
         ))}

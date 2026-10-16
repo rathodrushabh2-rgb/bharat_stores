@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BillActions } from "@/components/BillActions";
+import { Icon } from "@/components/Icon";
 import { StatusBadge } from "@/components/StatusBadge";
 import { requireUser } from "@/lib/auth";
 import { billText } from "@/lib/billText";
@@ -27,7 +28,11 @@ export default async function BillPage({ params, searchParams }: { params: Promi
 
   return (
     <div className="space-y-4">
-      {created && <p className="rounded-lg bg-green-600 p-3 text-center font-semibold text-white">✓ {t("billNo")} {b.bill_no} — saved / सेव हो गया</p>}
+      {created && (
+        <p className="flex items-center justify-center gap-2 rounded-2xl bg-green-600 p-3 font-semibold text-white">
+          <Icon name="check" size={20} /> {t("billNo")} {b.bill_no} — saved / सेव हो गया
+        </p>
+      )}
       <div className="card">
         <div className="flex items-start justify-between">
           <div>
@@ -40,25 +45,28 @@ export default async function BillPage({ params, searchParams }: { params: Promi
           </div>
           <StatusBadge status={b.status} t={t} />
         </div>
-        <div className="mt-3 rounded-lg bg-stone-50 p-3">
+        <div className="mt-3 space-y-1 rounded-2xl bg-ground p-3">
           {b.customer_id ? (
-            <Link href={`/customers/${b.customer_id}`} className="font-semibold text-brand-700 underline">
+            <Link href={`/customers/${b.customer_id}`} className="text-[17px] font-semibold text-brand-600">
               {b.cust_name}
             </Link>
           ) : (
             <span className="font-semibold">{t("walkIn")}</span>
           )}
           {b.cust_phone && (
-            <a href={`tel:${b.cust_phone}`} className="ml-2 text-sm">
-              📞 {b.cust_phone}
+            <a href={`tel:${b.cust_phone}`} className="ml-2 inline-flex items-center gap-1 text-sm">
+              <Icon name="phone" size={15} /> {b.cust_phone}
             </a>
           )}
-          {b.cust_address && <p className="text-sm">📍 {b.cust_address}</p>}
-          <p className="mt-1 text-sm font-semibold">{b.delivery === "home" ? "🛵 " + t("home_delivery") : "🏪 " + t("pickup")}</p>
-          {b.notes && <p className="mt-1 text-sm">📝 {b.notes}</p>}
+          {b.cust_address && <p className="text-sm text-muted">{b.cust_address}</p>}
+          <p className="flex items-center gap-1.5 text-sm font-semibold">
+            <Icon name={b.delivery === "home" ? "truck" : "store"} size={17} />
+            {b.delivery === "home" ? t("home_delivery") : t("pickup")}
+          </p>
+          {b.notes && <p className="text-sm">{b.notes}</p>}
           {b.delivered_at && (
-            <p className="mt-1 text-sm text-green-700">
-              ✅ {t("deliveredBy")}: {b.delivered_by_name} · {dateTime(b.delivered_at)}
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-green-700">
+              <Icon name="check" size={17} /> {t("deliveredBy")}: {b.delivered_by_name} · {dateTime(b.delivered_at)}
             </p>
           )}
         </div>
@@ -78,17 +86,17 @@ export default async function BillPage({ params, searchParams }: { params: Promi
                 )}
               </div>
             </div>
-            <div className="font-semibold">{money(i.amount)}</div>
+            <div className="amount text-lg">{money(i.amount)}</div>
           </div>
         ))}
-        <div className="mt-2 space-y-1 border-t border-stone-200 pt-2">
+        <div className="mt-2 space-y-1 border-t border-line pt-3">
           {num(b.discount) > 0 && (
             <div className="flex justify-between">
               <span>{t("discount")}</span>
               <span>−{money(b.discount)}</span>
             </div>
           )}
-          <div className="flex justify-between text-xl font-bold">
+          <div className="amount flex justify-between text-2xl">
             <span>{t("total")}</span>
             <span>{money(b.total)}</span>
           </div>
@@ -101,7 +109,7 @@ export default async function BillPage({ params, searchParams }: { params: Promi
             </span>
           </div>
           {due > 0 && b.status !== "cancelled" && (
-            <div className="flex justify-between font-bold text-red-600">
+            <div className="flex justify-between rounded-xl bg-red-50 px-3 py-2 font-bold text-red-700">
               <span>{t("due")}</span>
               <span>{money(due)}</span>
             </div>
@@ -111,10 +119,10 @@ export default async function BillPage({ params, searchParams }: { params: Promi
 
       <div className="grid grid-cols-2 gap-2">
         <Link href={`/print/bill/${id}`} className="btn-primary">
-          🖨️ {t("print")}
+          <Icon name="print" size={20} /> {t("print")}
         </Link>
         <a href={waLink(b.cust_phone, billText(b, items, settings))} target="_blank" className="btn-green">
-          💬 WhatsApp
+          <Icon name="chat" size={20} /> WhatsApp
         </a>
       </div>
       <BillActions id={id} status={b.status} isOwner={user.role === "owner"} lang={lang} />

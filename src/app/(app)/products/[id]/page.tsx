@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
+import { Icon } from "@/components/Icon";
 import { ProductFields } from "@/components/ProductFields";
 import { adjustStock, stockIn, updateProduct } from "@/app/actions/products";
 import { requireUser } from "@/lib/auth";
@@ -31,15 +32,15 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         <h1 className="h1">{pname(p, lang)}</h1>
         <p className="muted">{lang === "hi" ? p.name : p.name_hi}</p>
         <div className="mt-3 grid grid-cols-2 gap-3 text-center">
-          <div className="rounded-lg bg-brand-50 p-3">
+          <div className="rounded-2xl bg-brand-50 p-3">
             <div className="muted">{t("price")}</div>
-            <div className="text-xl font-bold">
+            <div className="amount text-xl">
               {money(p.price)}/{unit}
             </div>
           </div>
-          <div className={`rounded-lg p-3 ${isLow ? "bg-red-50 text-red-700" : "bg-stone-50"}`}>
+          <div className={`rounded-2xl p-3 ${isLow ? "bg-red-50 text-red-700" : "bg-ground"}`}>
             <div className="muted">{t("stock")}</div>
-            <div className="text-xl font-bold">
+            <div className="amount text-xl">
               {qty(p.stock)} {unit}
             </div>
           </div>
@@ -47,7 +48,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       </div>
 
       <details className="card" open={false}>
-        <summary className="h2 cursor-pointer">📥 {t("stockIn")}</summary>
+        <summary className="flex cursor-pointer items-center gap-2 font-semibold"><Icon name="box" size={20} className="text-blue-600" /> {t("stockIn")}</summary>
         <ActionForm action={stockIn} className="mt-3 space-y-3" resetOnOk>
           <input type="hidden" name="id" value={id} />
           <div className="grid grid-cols-2 gap-3">
@@ -72,7 +73,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       {isOwner && (
         <>
           <details className="card">
-            <summary className="h2 cursor-pointer">🔢 {t("stockAdjust")}</summary>
+            <summary className="flex cursor-pointer items-center gap-2 font-semibold"><Icon name="check" size={20} className="text-amber-700" /> {t("stockAdjust")}</summary>
             <ActionForm action={adjustStock} className="mt-3 space-y-3" resetOnOk>
               <input type="hidden" name="id" value={id} />
               <label className="label">
@@ -85,7 +86,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           </details>
 
           <details className="card">
-            <summary className="h2 cursor-pointer">✏️ {t("edit")}</summary>
+            <summary className="flex cursor-pointer items-center gap-2 font-semibold"><Icon name="edit" size={20} className="text-muted" /> {t("edit")}</summary>
             <ActionForm action={updateProduct} className="mt-3 space-y-4">
               <input type="hidden" name="id" value={id} />
               <ProductFields p={p} t={t} lang={lang} />

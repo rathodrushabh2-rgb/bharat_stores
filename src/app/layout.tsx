@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Sans_Devanagari } from "next/font/google";
+import { Baloo_2, Hind } from "next/font/google";
 import "./globals.css";
 import { getLang } from "@/lib/lang";
 
-const font = Noto_Sans_Devanagari({ subsets: ["devanagari", "latin"], weight: ["400", "500", "600", "700"], display: "swap" });
+// Both families were drawn for Devanagari and Latin together.
+const body = Hind({ subsets: ["devanagari", "latin"], weight: ["400", "500", "600", "700"], display: "swap", variable: "--font-body" });
+const display = Baloo_2({ subsets: ["devanagari", "latin"], weight: ["500", "600", "700", "800"], display: "swap", variable: "--font-display" });
 
 export const metadata: Metadata = {
   title: "Bharat Stores",
@@ -13,13 +15,13 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "Bharat Stores" },
 };
 
-export const viewport: Viewport = { themeColor: "#ea580c", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#F4F5EF", width: "device-width", initialScale: 1 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const lang = await getLang();
   return (
     <html lang={lang}>
-      <body className={font.className}>{children}</body>
+      <body className={`${body.variable} ${display.variable} font-sans`}>{children}</body>
     </html>
   );
 }
