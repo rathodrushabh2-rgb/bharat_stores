@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS products (
   name          TEXT NOT NULL,
   name_hi       TEXT,
   category      TEXT,
-  unit          TEXT NOT NULL DEFAULT 'pcs',
+  unit          TEXT NOT NULL DEFAULT 'kg',
   price         NUMERIC(12,2) NOT NULL DEFAULT 0,
   cost_price    NUMERIC(12,2),
   stock         NUMERIC(12,3) NOT NULL DEFAULT 0,
@@ -91,6 +91,10 @@ CREATE TABLE IF NOT EXISTS bill_items (
   amount      NUMERIC(12,2) NOT NULL
 );
 CREATE INDEX IF NOT EXISTS bill_items_bill_idx ON bill_items (bill_id);
+CREATE INDEX IF NOT EXISTS bill_items_product_idx ON bill_items (product_id);
+-- Master price at billing time; differs from price when the rate was overridden.
+ALTER TABLE bill_items ADD COLUMN IF NOT EXISTS list_price NUMERIC(12,2);
+ALTER TABLE products ALTER COLUMN unit SET DEFAULT 'kg';
 
 CREATE TABLE IF NOT EXISTS stock_moves (
   id          SERIAL PRIMARY KEY,
@@ -148,5 +152,6 @@ INSERT INTO settings (key, value) VALUES
   ('shop_address', ''),
   ('shop_phone', ''),
   ('gstin', ''),
-  ('bill_footer', 'धन्यवाद! फिर पधारें।')
+  ('bill_footer', 'धन्यवाद! फिर पधारें।'),
+  ('staff_can_edit_rate', '0')
 ON CONFLICT (key) DO NOTHING;

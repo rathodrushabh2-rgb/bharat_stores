@@ -47,7 +47,10 @@ const SETTING_KEYS = ["shop_name", "shop_name_hi", "shop_address", "shop_phone",
 
 export async function saveSettings(_: ActionResult, fd: FormData): Promise<ActionResult> {
   const me = await requireOwner();
-  const values = SETTING_KEYS.map((k) => [k, String(fd.get(k) ?? "").trim()] as const);
+  const values = [
+    ...SETTING_KEYS.map((k) => [k, String(fd.get(k) ?? "").trim()] as const),
+    ["staff_can_edit_rate", fd.get("staff_can_edit_rate") === "on" ? "1" : "0"] as const,
+  ];
   await sql.transaction([
     ...values.map(([k, v]) => sql`INSERT INTO settings (key, value) VALUES (${k}, ${v}) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`),
     auditQuery(me.id, "settings_update", "settings", null, Object.fromEntries(values)),

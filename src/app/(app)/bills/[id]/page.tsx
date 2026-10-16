@@ -5,8 +5,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { requireUser } from "@/lib/auth";
 import { billText } from "@/lib/billText";
 import { getSettings, num, sql } from "@/lib/db";
-import { dateTime, money, qty, waLink } from "@/lib/format";
-import { pname, unitLabel, type Key } from "@/lib/i18n";
+import { dateTime, money, waLink } from "@/lib/format";
+import { pname, qtyUnit, unitLabel, type Key } from "@/lib/i18n";
 import { getT } from "@/lib/lang";
 
 export default async function BillPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
@@ -70,7 +70,12 @@ export default async function BillPage({ params, searchParams }: { params: Promi
             <div>
               <div className="font-semibold">{pname(i, lang)}</div>
               <div className="muted">
-                {qty(i.qty)} {unitLabel(i.unit, lang)} × {money(i.price)}
+                {qtyUnit(i.qty, i.unit, lang)} × {money(i.price)}/{unitLabel(i.unit, lang)}
+                {i.list_price !== null && Number(i.list_price) !== Number(i.price) && (
+                  <span className="ml-1 text-purple-700">
+                    ({t("listRate")} <s>{money(i.list_price)}</s>)
+                  </span>
+                )}
               </div>
             </div>
             <div className="font-semibold">{money(i.amount)}</div>

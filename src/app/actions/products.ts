@@ -5,12 +5,13 @@ import { redirect } from "next/navigation";
 import type { ActionResult } from "@/components/ActionForm";
 import { requireOwner, requireUser } from "@/lib/auth";
 import { auditQuery, num, round2, round3, sql } from "@/lib/db";
+import { toHindi } from "@/lib/hindi";
 import { UNITS } from "@/lib/i18n";
 import { formNum, formStr } from "@/lib/validate";
 
 function readProduct(fd: FormData) {
   const name = formStr(fd.get("name"));
-  const unit = String(fd.get("unit") ?? "pcs");
+  const unit = String(fd.get("unit") ?? "kg");
   const price = formNum(fd.get("price"));
   if (!name) return { error: "Name is required / नाम ज़रूरी है" } as const;
   if (!UNITS[unit]) return { error: "Invalid unit" } as const;
@@ -19,7 +20,7 @@ function readProduct(fd: FormData) {
   return {
     data: {
       name,
-      name_hi: formStr(fd.get("name_hi")),
+      name_hi: formStr(fd.get("name_hi")) ?? toHindi(name),
       category: formStr(fd.get("category")),
       unit,
       price: round2(price),
@@ -130,4 +131,18 @@ export async function adjustStock(_: ActionResult, fd: FormData): Promise<Action
   ]);
   revalidatePath(`/products/${id}`);
   return { ok: `✓ ${diff > 0 ? "+" : ""}${diff}` };
+}
+
+/** Fills the Hindi name of every product that has none. */
+export async function fillMissingHindi(): Promise<ActionResult> {
+  const me = await requireOwner();
+  const rows = await sql`SELECT id, name FROM products WHERE name_hi IS NULL OR btrim(name_hi) = ''`;
+  if (!rows.length) return { ok: "✓ 0" };
+  const data = JSON.stringify(rows.map((r) => ({ id: r.id, name_hi: toHindi(r.name) })));
+  await sql.transaction([
+    sql`UPDATE products p SET name_hi = x.name_hi FROM jsonb_to_recordset(${data}::jsonb) AS x(id int, name_hi text) WHERE p.id = x.id`,
+    auditQuery(me.id, "products_fill_hindi", "product", null, { count: rows.length }),
+  ]);
+  revalidatePath("/products");
+  return { ok: `✓ ${rows.length}` };
 }

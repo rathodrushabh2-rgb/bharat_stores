@@ -153,6 +153,26 @@ const en = {
   setupHelp: "Create the owner account. You will log in with this username and PIN.",
   confirmPin: "Confirm PIN",
   installHint: "Tip: In Chrome menu choose \"Add to Home screen\" to use this like an app.",
+  autoTranslated: "auto-translated",
+  uploadRates: "Upload rate list",
+  downloadRates: "Download current rate list (Excel)",
+  uploadHelp: "1. Download the current rate list. 2. Change prices in Excel (or add new rows). 3. Upload the file here, check the changes, and press Apply.",
+  chooseFile: "Choose file",
+  createNew: "Add products that are not in the shop yet",
+  updated: "Updated",
+  created: "New",
+  skipped: "Skipped",
+  applyUpload: "Apply changes",
+  fillHindi: "Fill missing Hindi names",
+  grams: "g",
+  oldRates: "Apply old rates",
+  masterRates: "Use list rates",
+  oldRatesOn: "Old rates of this customer are applied",
+  lastRate: "Last",
+  rateChanged: "Rate changed",
+  listRate: "List",
+  staffCanEditRate: "Staff can change rates on bills",
+  billLabel: "Bill",
 };
 
 export type Key = keyof typeof en;
@@ -304,6 +324,26 @@ const hi: Record<Key, string> = {
   setupHelp: "मालिक का अकाउंट बनाएं। इसी यूज़रनेम और पिन से लॉगिन होगा।",
   confirmPin: "पिन दोबारा",
   installHint: "सुझाव: Chrome मेन्यू में \"Add to Home screen\" चुनें, ऐप की तरह चलेगा।",
+  autoTranslated: "अपने आप अनुवाद",
+  uploadRates: "रेट लिस्ट अपलोड",
+  downloadRates: "मौजूदा रेट लिस्ट डाउनलोड (Excel)",
+  uploadHelp: "1. मौजूदा रेट लिस्ट डाउनलोड करें। 2. Excel में भाव बदलें (या नई लाइन जोड़ें)। 3. फ़ाइल यहाँ अपलोड करें, बदलाव देखें और लागू करें दबाएं।",
+  chooseFile: "फ़ाइल चुनें",
+  createNew: "जो सामान दुकान में नहीं है उसे जोड़ें",
+  updated: "बदले",
+  created: "नए",
+  skipped: "छोड़े",
+  applyUpload: "बदलाव लागू करें",
+  fillHindi: "बाकी हिंदी नाम भरें",
+  grams: "ग्राम",
+  oldRates: "पुराने भाव लगाएं",
+  masterRates: "लिस्ट के भाव लगाएं",
+  oldRatesOn: "इस ग्राहक के पुराने भाव लगे हैं",
+  lastRate: "पिछला",
+  rateChanged: "भाव बदला",
+  listRate: "लिस्ट",
+  staffCanEditRate: "स्टाफ़ बिल में भाव बदल सकता है",
+  billLabel: "बिल",
 };
 
 export const dict: Record<Lang, Record<Key, string>> = { en, hi };
@@ -333,4 +373,15 @@ export function unitLabel(unit: string, lang: Lang) {
 /** Product name in the chosen language, falling back to English. */
 export function pname(p: { [k: string]: any }, lang: Lang): string {
   return lang === "hi" && p.name_hi ? p.name_hi : p.name;
+}
+
+/** Units that can also be entered/shown in thousandths (kg ↔ g, litre ↔ ml). */
+export const SMALL_UNIT: Record<string, string> = { kg: "g", litre: "ml" };
+
+/** "300 ग्राम" for 0.3 kg, "2 किलो" for 2 kg. */
+export function qtyUnit(qty: number | string, unit: string, lang: Lang) {
+  const n = Number(qty);
+  const small = SMALL_UNIT[unit];
+  if (small && n > 0 && n < 1) return `${Math.round(n * 1000)} ${unitLabel(small, lang)}`;
+  return `${n.toLocaleString("en-IN", { maximumFractionDigits: 3 })} ${unitLabel(unit, lang)}`;
 }

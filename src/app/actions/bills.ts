@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireOwner, requireUser } from "@/lib/auth";
-import { auditQuery, num, round2, round3, sql } from "@/lib/db";
+import { auditQuery, getSettings, num, round2, round3, sql } from "@/lib/db";
 
 export type BillInput = {
   customerId: number | null;
@@ -16,6 +16,25 @@ export type BillInput = {
   waMessageId?: number | null;
 };
 
+export type LastRates = Record<number, { price: number; bill_no: number; date: string }>;
+
+async function lastRatesFor(customerId: number): Promise<LastRates> {
+  // For each product: the rate on the most recent (not cancelled) bill of this customer that has it.
+  const rows = await sql`
+    SELECT DISTINCT ON (bi.product_id) bi.product_id, bi.price, b.bill_no, b.created_at
+    FROM bill_items bi JOIN bills b ON b.id = bi.bill_id
+    WHERE b.customer_id = ${customerId} AND b.status <> 'cancelled' AND bi.product_id IS NOT NULL
+    ORDER BY bi.product_id, b.created_at DESC, b.id DESC`;
+  return Object.fromEntries(rows.map((r) => [r.product_id, { price: num(r.price), bill_no: r.bill_no, date: String(r.created_at) }]));
+}
+
+/** Rates this customer paid last time, per product (used by "Apply old rates"). */
+export async function getLastRates(customerId: number): Promise<LastRates> {
+  await requireUser();
+  if (!Number.isInteger(customerId)) return {};
+  return lastRatesFor(customerId);
+}
+
 const LAST_BILL = sql.unsafe("currval(pg_get_serial_sequence('bills', 'id'))");
 
 /**
@@ -25,6 +44,7 @@ const LAST_BILL = sql.unsafe("currval(pg_get_serial_sequence('bills', 'id'))");
 export async function createBill(input: BillInput): Promise<{ error: string } | { id: number }> {
   const me = await requireUser();
   const isOwner = me.role === "owner";
+  const canEditRate = isOwner || (await getSettings()).staff_can_edit_rate === "1";
 
   const lines = input.items.filter((i) => i.qty > 0);
   if (!lines.length) return { error: "Add at least one item / कम से कम एक सामान जोड़ें" };
@@ -32,19 +52,22 @@ export async function createBill(input: BillInput): Promise<{ error: string } | 
 
   const products = await sql`SELECT id, name, name_hi, unit, price FROM products WHERE id = ANY(${lines.map((l) => l.productId)})`;
   const byId = new Map(products.map((p) => [p.id, p]));
+  // Without rate-edit rights, a rate may only be the list price or this customer's previous rate.
+  const lastRates = !canEditRate && input.customerId ? await lastRatesFor(input.customerId) : {};
   const items = [];
   for (const l of lines) {
     const p = byId.get(l.productId);
     if (!p) return { error: "Product not found" };
     const qty = round3(Number(l.qty));
-    // Staff always bill at the owner's price; the owner may change the rate on a bill.
-    const price = isOwner && Number.isFinite(l.price) && l.price >= 0 ? round2(l.price) : num(p.price);
     if (!(qty > 0)) return { error: `Wrong quantity for ${p.name}` };
-    items.push({ product_id: p.id, name: p.name, name_hi: p.name_hi, unit: p.unit, qty, price, amount: round2(qty * price) });
+    const listPrice = num(p.price);
+    const wanted = Number.isFinite(l.price) && l.price >= 0 ? round2(l.price) : listPrice;
+    const price = canEditRate || wanted === lastRates[p.id]?.price ? wanted : listPrice;
+    items.push({ product_id: p.id, name: p.name, name_hi: p.name_hi, unit: p.unit, qty, price, list_price: listPrice, amount: round2(qty * price) });
   }
 
   const subtotal = round2(items.reduce((s, i) => s + i.amount, 0));
-  const discount = isOwner ? round2(Math.min(Math.max(Number(input.discount) || 0, 0), subtotal)) : 0;
+  const discount = canEditRate ? round2(Math.min(Math.max(Number(input.discount) || 0, 0), subtotal)) : 0;
   const total = round2(subtotal - discount);
   let paid: number;
   switch (input.paymentMode) {
@@ -89,9 +112,10 @@ export async function createBill(input: BillInput): Promise<{ error: string } | 
         VALUES (${customerId}, ${cust?.name ?? null}, ${cust?.phone ?? null}, ${cust?.address ?? null}, ${delivery}, ${subtotal}, ${discount}, ${total},
                 ${paid}, ${input.paymentMode}, ${source}, ${notes}, ${me.id})
         RETURNING id, bill_no`,
-    sql`INSERT INTO bill_items (bill_id, product_id, name, name_hi, unit, qty, price, amount)
-        SELECT ${LAST_BILL}, x.product_id, x.name, x.name_hi, x.unit, x.qty, x.price, x.amount
-        FROM jsonb_to_recordset(${itemsJson}::jsonb) AS x(product_id int, name text, name_hi text, unit text, qty numeric, price numeric, amount numeric)`,
+    sql`INSERT INTO bill_items (bill_id, product_id, name, name_hi, unit, qty, price, list_price, amount)
+        SELECT ${LAST_BILL}, x.product_id, x.name, x.name_hi, x.unit, x.qty, x.price, x.list_price, x.amount
+        FROM jsonb_to_recordset(${itemsJson}::jsonb)
+          AS x(product_id int, name text, name_hi text, unit text, qty numeric, price numeric, list_price numeric, amount numeric)`,
     sql`UPDATE products p SET stock = p.stock - x.qty, updated_at = now()
         FROM (SELECT product_id, sum(qty) AS qty FROM jsonb_to_recordset(${itemsJson}::jsonb) AS y(product_id int, qty numeric) GROUP BY product_id) x
         WHERE p.id = x.product_id`,
@@ -111,7 +135,14 @@ export async function createBill(input: BillInput): Promise<{ error: string } | 
       : []),
     ...(input.waMessageId ? [sql`UPDATE wa_messages SET status = 'done', bill_id = ${LAST_BILL} WHERE id = ${input.waMessageId}`] : []),
     sql`INSERT INTO audit_log (user_id, action, entity, entity_id, details)
-        VALUES (${me.id}, 'bill_create', 'bill', ${LAST_BILL}, ${JSON.stringify({ total, paid, mode: input.paymentMode, items: items.length, customerId })}::jsonb)`,
+        VALUES (${me.id}, 'bill_create', 'bill', ${LAST_BILL}, ${JSON.stringify({
+          total,
+          paid,
+          mode: input.paymentMode,
+          items: items.length,
+          customerId,
+          rate_changes: items.filter((i) => i.price !== i.list_price).map((i) => ({ name: i.name, list: i.list_price, billed: i.price })),
+        })}::jsonb)`,
   ]);
 
   revalidatePath("/bills");

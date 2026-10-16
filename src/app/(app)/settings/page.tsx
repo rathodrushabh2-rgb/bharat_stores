@@ -28,6 +28,10 @@ export default async function SettingsPage() {
             <input name={k} className="input" defaultValue={s[k] ?? ""} />
           </div>
         ))}
+        <label className="flex items-center gap-2 rounded-lg bg-stone-50 p-3">
+          <input type="checkbox" name="staff_can_edit_rate" defaultChecked={s.staff_can_edit_rate === "1"} className="h-5 w-5" />
+          {t("staffCanEditRate")}
+        </label>
         <SubmitButton>{t("save")}</SubmitButton>
       </ActionForm>
     </div>

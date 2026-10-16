@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { ActionForm, SubmitButton } from "@/components/ActionForm";
+import { fillMissingHindi } from "@/app/actions/products";
 import { getUser } from "@/lib/auth";
 import { num, sql } from "@/lib/db";
 import { money, qty } from "@/lib/format";
@@ -15,14 +17,18 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
     WHERE (${q.trim()} = '' OR name ILIKE ${like} OR name_hi ILIKE ${like} OR category ILIKE ${like})
       AND (${!!low} = false OR (low_stock_at > 0 AND stock <= low_stock_at))
     ORDER BY active DESC, name LIMIT 500`;
+  const [{ missing }] = await sql`SELECT count(*)::int AS missing FROM products WHERE name_hi IS NULL OR btrim(name_hi) = ''`;
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h1 className="h1">{t("products")}</h1>
         {user.role === "owner" && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <Link href="/products/prices" className="btn-secondary btn-sm">
               ₹ {t("priceList")}
+            </Link>
+            <Link href="/products/upload" className="btn-secondary btn-sm">
+              ⬆️ {t("uploadRates")}
             </Link>
             <Link href="/products/new" className="btn-primary btn-sm">
               + {t("add")}
@@ -30,6 +36,13 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
           </div>
         )}
       </div>
+      {user.role === "owner" && missing > 0 && (
+        <ActionForm action={fillMissingHindi}>
+          <SubmitButton className="btn-secondary btn-sm w-full">
+            ✨ {t("fillHindi")} ({missing})
+          </SubmitButton>
+        </ActionForm>
+      )}
       <form className="flex gap-2">
         <input name="q" defaultValue={q} placeholder={t("searchProducts")} className="input" />
         <button className="btn-secondary">{t("search")}</button>

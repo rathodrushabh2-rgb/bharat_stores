@@ -1,16 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
-import { createBill, type BillInput } from "@/app/actions/bills";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { createBill, getLastRates, type BillInput, type LastRates } from "@/app/actions/bills";
 import { money, qty as fmtQty } from "@/lib/format";
-import { pname, translator, unitLabel, type Lang } from "@/lib/i18n";
+import { pname, SMALL_UNIT, translator, unitLabel, type Lang } from "@/lib/i18n";
 
 type Product = { id: number; name: string; name_hi: string | null; unit: string; price: number; stock: number };
 type Customer = { id: number; name: string; phone: string | null; address: string | null; area: string | null; due: number };
-type Line = { productId: number; qty: number; price: number };
+/** qty is always in the product's own unit (kg, litre, pcs…); `small` only changes how it is typed (g, ml). */
+type Line = { productId: number; qty: number; price: number; small: boolean };
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
+const round3 = (n: number) => Math.round(n * 1000) / 1000;
 
 function matches(text: string, q: string) {
   return text.toLowerCase().includes(q);
@@ -20,6 +22,7 @@ export function BillForm({
   products,
   customers,
   isOwner,
+  canEditRate,
   lang,
   initialCustomerId,
   wa,
@@ -27,6 +30,7 @@ export function BillForm({
   products: Product[];
   customers: Customer[];
   isOwner: boolean;
+  canEditRate: boolean;
   lang: Lang;
   initialCustomerId?: number | null;
   wa?: { id: number; body: string; from_name: string | null; from_phone: string | null } | null;
@@ -50,6 +54,35 @@ export function BillForm({
     return customers.filter((c) => matches(`${c.name} ${c.phone ?? ""} ${c.area ?? ""}`, q)).slice(0, 6);
   }, [custQ, customers]);
 
+  // This customer's previous rates
+  const [lastRates, setLastRates] = useState<LastRates>({});
+  const [oldOn, setOldOn] = useState(false);
+  useEffect(() => {
+    setLastRates({});
+    if (!customerId) return;
+    let live = true;
+    getLastRates(customerId).then((r) => live && setLastRates(r));
+    return () => {
+      live = false;
+    };
+  }, [customerId]);
+  const hasLastRates = Object.keys(lastRates).length > 0;
+
+  const rateFor = (p: Product, useOld: boolean) => (useOld && lastRates[p.id] ? lastRates[p.id].price : p.price);
+
+  function setOldRates(on: boolean) {
+    setOldOn(on);
+    setLines((ls) => ls.map((l) => ({ ...l, price: rateFor(productById.get(l.productId)!, on) })));
+  }
+
+  function changeCustomer(id: number | null) {
+    if (oldOn) {
+      setOldOn(false);
+      setLines((ls) => ls.map((l) => ({ ...l, price: productById.get(l.productId)!.price })));
+    }
+    setCustomerId(id);
+  }
+
   // Items
   const [lines, setLines] = useState<Line[]>([]);
   const [prodQ, setProdQ] = useState("");
@@ -62,8 +95,8 @@ export function BillForm({
   function addProduct(p: Product) {
     setLines((ls) => {
       const i = ls.findIndex((l) => l.productId === p.id);
-      if (i >= 0) return ls.map((l, j) => (j === i ? { ...l, qty: l.qty + 1 } : l));
-      return [...ls, { productId: p.id, qty: 1, price: p.price }];
+      if (i >= 0) return ls.map((l, j) => (j === i ? { ...l, qty: round3(l.qty + (l.small ? 0.1 : 1)) } : l));
+      return [...ls, { productId: p.id, qty: 1, price: rateFor(p, oldOn), small: false }];
     });
     setProdQ("");
   }
@@ -77,7 +110,7 @@ export function BillForm({
   const [delivery, setDelivery] = useState<BillInput["delivery"]>(wa ? "home" : "pickup");
   const [notes, setNotes] = useState("");
   const subtotal = round2(lines.reduce((s, l) => s + round2((l.qty || 0) * l.price), 0));
-  const total = round2(subtotal - (isOwner ? discount : 0));
+  const total = round2(subtotal - (canEditRate ? discount : 0));
   const hasCustomer = !!customerId || (showNew && nc.name.trim() !== "");
 
   function save() {
@@ -88,7 +121,7 @@ export function BillForm({
       const res = await createBill({
         customerId,
         newCustomer: !customerId && showNew ? nc : null,
-        items: lines,
+        items: lines.map((l) => ({ productId: l.productId, qty: round3(l.qty), price: l.price })),
         discount,
         paymentMode: mode,
         paid,
@@ -126,7 +159,7 @@ export function BillForm({
                 </div>
               )}
             </div>
-            <button className="text-xl text-stone-500" onClick={() => setCustomerId(null)} aria-label="remove">
+            <button className="text-xl text-stone-500" onClick={() => changeCustomer(null)} aria-label="remove">
               ✕
             </button>
           </div>
@@ -147,7 +180,7 @@ export function BillForm({
                 key={c.id}
                 className="flex w-full justify-between rounded-lg border border-stone-200 p-2 text-left"
                 onClick={() => {
-                  setCustomerId(c.id);
+                  changeCustomer(c.id);
                   setCustQ("");
                 }}
               >
@@ -161,6 +194,14 @@ export function BillForm({
               + {t("newCustomer")}
             </button>
           </div>
+        )}
+        {customer && hasLastRates && (
+          <button
+            className={`btn btn-sm w-full ${oldOn ? "bg-purple-100 text-purple-800 ring-1 ring-purple-300" : "bg-purple-600 text-white"}`}
+            onClick={() => setOldRates(!oldOn)}
+          >
+            {oldOn ? `✓ ${t("oldRatesOn")} · ${t("masterRates")}` : `↺ ${t("oldRates")}`}
+          </button>
         )}
       </section>
 
@@ -177,7 +218,7 @@ export function BillForm({
                   <span className="muted"> · {lang === "hi" ? p.name : p.name_hi}</span>
                 </span>
                 <span className="text-right text-sm">
-                  {money(p.price)}/{unitLabel(p.unit, lang)}
+                  {money(rateFor(p, oldOn))}/{unitLabel(p.unit, lang)}
                   <br />
                   <span className={p.stock <= 0 ? "text-red-600" : "text-stone-400"}>
                     {t("stockLeft")}: {fmtQty(p.stock)}
@@ -191,34 +232,63 @@ export function BillForm({
         {lines.length === 0 && <p className="muted">{t("noItems")}</p>}
         {lines.map((l, i) => {
           const p = productById.get(l.productId)!;
+          const smallUnit = SMALL_UNIT[p.unit];
+          const factor = l.small ? 1000 : 1;
+          const shown = round3(l.qty * factor);
+          const step = l.small ? 50 : 1;
+          const last = lastRates[p.id];
+          const changed = l.price !== p.price;
           return (
-            <div key={l.productId} className="rounded-lg border border-stone-200 p-2.5">
+            <div key={l.productId} className={`rounded-lg border p-2.5 ${changed ? "border-purple-300 bg-purple-50/40" : "border-stone-200"}`}>
               <div className="flex items-start justify-between">
-                <div className="font-semibold">{pname(p, lang)}</div>
+                <div>
+                  <div className="font-semibold">{pname(p, lang)}</div>
+                  <div className="text-xs text-stone-500">{lang === "hi" ? p.name : p.name_hi}</div>
+                </div>
                 <button className="px-2 text-stone-400" onClick={() => removeLine(i)} aria-label="remove">
                   ✕
                 </button>
               </div>
-              <div className="mt-2 flex items-center gap-2">
-                <button className="btn-secondary btn-sm w-9" onClick={() => updateLine(i, { qty: Math.max(0, round2(l.qty - 1)) })}>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button className="btn-secondary btn-sm w-9" onClick={() => updateLine(i, { qty: Math.max(0, round3((shown - step) / factor)) })}>
                   −
                 </button>
                 <input
                   className="input w-20 px-1 text-center"
                   type="number"
                   inputMode="decimal"
-                  step="0.001"
+                  step={l.small ? 1 : 0.001}
                   min="0"
-                  value={l.qty}
-                  onChange={(e) => updateLine(i, { qty: Number(e.target.value) })}
+                  value={Number.isFinite(shown) ? shown : ""}
+                  onChange={(e) => updateLine(i, { qty: round3(Number(e.target.value) / factor) })}
                 />
-                <button className="btn-secondary btn-sm w-9" onClick={() => updateLine(i, { qty: round2(l.qty + 1) })}>
+                <button className="btn-secondary btn-sm w-9" onClick={() => updateLine(i, { qty: round3((shown + step) / factor) })}>
                   +
                 </button>
-                <span className="text-sm text-stone-500">{unitLabel(p.unit, lang)} ×</span>
-                {isOwner ? (
+                {smallUnit ? (
+                  // Tap to switch between kg and grams (or litre and ml); the quantity stays the same.
+                  <div className="flex overflow-hidden rounded-lg ring-1 ring-stone-300">
+                    {[false, true].map((sm) => (
+                      <button
+                        key={String(sm)}
+                        className={`px-2 py-1.5 text-sm ${l.small === sm ? "bg-stone-800 text-white" : "bg-white"}`}
+                        onClick={() => updateLine(i, { small: sm })}
+                      >
+                        {unitLabel(sm ? smallUnit : p.unit, lang)}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-sm text-stone-500">{unitLabel(p.unit, lang)}</span>
+                )}
+              </div>
+              <div className="mt-2 flex items-center gap-2 text-sm">
+                <span className="text-stone-500">
+                  {t("rate")} /{unitLabel(p.unit, lang)}
+                </span>
+                {canEditRate ? (
                   <input
-                    className="input w-20 px-1 text-right"
+                    className={`input w-24 px-2 py-1.5 text-right ${changed ? "border-purple-400 font-semibold text-purple-800" : ""}`}
                     type="number"
                     inputMode="decimal"
                     step="0.01"
@@ -227,12 +297,24 @@ export function BillForm({
                     onChange={(e) => updateLine(i, { price: Number(e.target.value) })}
                   />
                 ) : (
-                  <span className="text-sm" title={t("priceLocked")}>
-                    {money(l.price)} 🔒
-                  </span>
+                  <span title={t("priceLocked")}>{money(l.price)} 🔒</span>
                 )}
-                <span className="ml-auto font-bold">{money(round2((l.qty || 0) * l.price))}</span>
+                <span className="ml-auto text-base font-bold">{money(round2((l.qty || 0) * l.price))}</span>
               </div>
+              {(changed || (last && last.price !== l.price)) && (
+                <div className="mt-1 flex flex-wrap gap-x-3 text-xs">
+                  {changed && (
+                    <button className="text-purple-700 underline" onClick={() => updateLine(i, { price: p.price })}>
+                      {t("listRate")}: {money(p.price)}
+                    </button>
+                  )}
+                  {last && last.price !== l.price && (
+                    <button className="text-purple-700 underline" onClick={() => updateLine(i, { price: last.price })}>
+                      {t("lastRate")}: {money(last.price)} ({t("billLabel")} #{last.bill_no})
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
@@ -244,7 +326,7 @@ export function BillForm({
           <span>{t("subtotal")}</span>
           <span>{money(subtotal)}</span>
         </div>
-        {isOwner && (
+        {canEditRate && (
           <div className="flex items-center justify-between gap-2">
             <span>{t("discount")}</span>
             <input className="input w-28 text-right" type="number" inputMode="decimal" min="0" value={discount || ""} onChange={(e) => setDiscount(Number(e.target.value))} placeholder="0" />
