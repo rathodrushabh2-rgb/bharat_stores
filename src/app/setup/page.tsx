@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
+import { LangToggle } from "@/components/LangToggle";
 import { setupOwner } from "@/app/actions/auth";
 import { sql } from "@/lib/db";
 import { getT } from "@/lib/lang";
@@ -9,9 +10,12 @@ export const dynamic = "force-dynamic";
 export default async function SetupPage() {
   const [{ n }] = await sql`SELECT count(*)::int AS n FROM users`;
   if (n > 0) redirect("/login");
-  const { t } = await getT();
+  const { lang, t } = await getT();
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center p-6">
+    <main className="relative mx-auto flex min-h-screen max-w-sm flex-col justify-center p-6">
+      <div className="absolute right-6 top-6">
+        <LangToggle lang={lang} />
+      </div>
       <h1 className="h1 mb-1">{t("setupTitle")}</h1>
       <p className="muted mb-4">{t("setupHelp")}</p>
       <ActionForm action={setupOwner} className="card space-y-4">

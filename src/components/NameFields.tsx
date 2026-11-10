@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toHindi } from "@/lib/hindi";
 
 /** English name + Hindi name; the Hindi name follows the English one until the user edits it. */
-export function NameFields({ name = "", nameHi = "", labels }: { name?: string; nameHi?: string; labels: { name: string; nameHi: string; auto: string } }) {
+export function NameFields({ name = "", nameHi = "", labels }: { name?: string; nameHi?: string; labels: { name: string; nameHi: string; auto: string; translate: string } }) {
   const [en, setEn] = useState(name);
   const [hi, setHi] = useState(nameHi);
   // An existing product whose Hindi name differs from the suggestion was set by hand: keep it.
@@ -48,7 +48,7 @@ export function NameFields({ name = "", nameHi = "", labels }: { name?: string; 
                 setAuto(true);
               }}
             >
-              ↺ अनुवाद
+              ↺ {labels.translate}
             </button>
           )}
         </div>

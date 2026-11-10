@@ -1,5 +1,6 @@
 "use server";
 
+import { getT } from "@/lib/lang";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionResult } from "@/components/ActionForm";
@@ -19,11 +20,12 @@ function readCustomer(fd: FormData) {
 
 export async function createCustomer(_: ActionResult, fd: FormData): Promise<ActionResult> {
   const me = await requireUser();
+  const { t } = await getT();
   const c = readCustomer(fd);
-  if (!c.name) return { error: "Name is required / नाम ज़रूरी है" };
+  if (!c.name) return { error: t("errNameRequired") };
   if (c.phone) {
     const dup = await sql`SELECT id, name FROM customers WHERE phone = ${c.phone}`;
-    if (dup.length) return { error: `This phone is already saved for ${dup[0].name} / यह नंबर पहले से है` };
+    if (dup.length) return { error: `${t("errPhoneExists")} ${dup[0].name}` };
   }
   const [row] = await sql`INSERT INTO customers (name, phone, address, area, notes)
     VALUES (${c.name}, ${c.phone}, ${c.address}, ${c.area}, ${c.notes}) RETURNING id`;
@@ -34,15 +36,16 @@ export async function createCustomer(_: ActionResult, fd: FormData): Promise<Act
 
 export async function updateCustomer(_: ActionResult, fd: FormData): Promise<ActionResult> {
   const me = await requireUser();
+  const { t } = await getT();
   const id = Number(fd.get("id"));
   const c = readCustomer(fd);
-  if (!c.name) return { error: "Name is required / नाम ज़रूरी है" };
+  if (!c.name) return { error: t("errNameRequired") };
   await sql.transaction([
     sql`UPDATE customers SET name = ${c.name}, phone = ${c.phone}, address = ${c.address}, area = ${c.area}, notes = ${c.notes} WHERE id = ${id}`,
     auditQuery(me.id, "customer_update", "customer", id, c),
   ]);
   revalidatePath(`/customers/${id}`);
-  return { ok: "✓ Saved / सेव हो गया" };
+  return { ok: `✓ ${t("saved")}` };
 }
 
 export async function receivePayment(_: ActionResult, fd: FormData): Promise<ActionResult> {
@@ -50,7 +53,8 @@ export async function receivePayment(_: ActionResult, fd: FormData): Promise<Act
   const id = Number(fd.get("id"));
   const amt = formNum(fd.get("amount"));
   const mode = fd.get("mode") === "upi" ? "upi" : "cash";
-  if (amt === null || amt <= 0) return { error: "Enter amount / रकम डालें" };
+  const { t } = await getT();
+  if (amt === null || amt <= 0) return { error: t("errAmount") };
   const amount = round2(amt);
   const note = formStr(fd.get("note"));
   await sql.transaction([
@@ -58,7 +62,7 @@ export async function receivePayment(_: ActionResult, fd: FormData): Promise<Act
     auditQuery(me.id, "payment_received", "customer", id, { amount, mode, note }),
   ]);
   revalidatePath(`/customers/${id}`);
-  return { ok: `✓ ₹${amount} जमा` };
+  return { ok: `✓ ₹${amount} ${t("received")}` };
 }
 
 export async function adjustBalance(_: ActionResult, fd: FormData): Promise<ActionResult> {
@@ -66,13 +70,14 @@ export async function adjustBalance(_: ActionResult, fd: FormData): Promise<Acti
   const id = Number(fd.get("id"));
   const amt = formNum(fd.get("amount"));
   const note = formStr(fd.get("note"));
-  if (amt === null || amt <= 0) return { error: "Enter amount / रकम डालें" };
-  if (!note) return { error: "Write a reason / कारण लिखें" };
+  const { t } = await getT();
+  if (amt === null || amt <= 0) return { error: t("errAmount") };
+  if (!note) return { error: t("errReason") };
   const amount = round2(amt) * (fd.get("sign") === "-1" ? -1 : 1);
   await sql.transaction([
     sql`INSERT INTO ledger (customer_id, kind, amount, note, created_by) VALUES (${id}, 'adjust', ${amount}, ${note}, ${me.id})`,
     auditQuery(me.id, "balance_adjust", "customer", id, { amount, note }),
   ]);
   revalidatePath(`/customers/${id}`);
-  return { ok: "✓" };
+  return { ok: `✓ ${t("saved")}` };
 }

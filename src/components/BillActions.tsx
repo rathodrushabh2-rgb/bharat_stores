@@ -25,7 +25,7 @@ export function BillActions({ id, status, isOwner, lang }: { id: number; status:
           className="btn-secondary col-span-2 !text-red-600"
           disabled={pending}
           onClick={() => {
-            const reason = window.prompt(t("confirmCancel") + "\n\nReason / कारण:");
+            const reason = window.prompt(`${t("confirmCancel")}\n\n${t("reason")}:`);
             if (reason !== null) start(() => cancelBill(id, reason));
           }}
         >

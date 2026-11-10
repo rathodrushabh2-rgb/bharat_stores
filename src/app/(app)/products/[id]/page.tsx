@@ -112,7 +112,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                 {m.bill_no ? ` #${m.bill_no}` : ""} {m.note ? `· ${m.note}` : ""}
               </div>
               <div className="muted">
-                {dateTime(m.created_at)} · {m.by}
+                {dateTime(m.created_at, lang)} · {m.by}
               </div>
             </div>
             <div className={`font-semibold ${num(m.qty) < 0 ? "text-red-600" : "text-green-700"}`}>
@@ -128,7 +128,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         {prices.map((h) => (
           <div key={h.id} className="list-row text-sm">
             <div className="muted">
-              {dateTime(h.changed_at)} · {h.by}
+              {dateTime(h.changed_at, lang)} · {h.by}
             </div>
             <div>
               {h.old_price !== null && <span className="text-stone-400 line-through">{money(h.old_price)}</span>} <b>{money(h.new_price)}</b>

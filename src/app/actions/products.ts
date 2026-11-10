@@ -1,5 +1,7 @@
 "use server";
 
+import { getT } from "@/lib/lang";
+import type { Key } from "@/lib/i18n";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionResult } from "@/components/ActionForm";
@@ -9,13 +11,13 @@ import { toHindi } from "@/lib/hindi";
 import { UNITS } from "@/lib/i18n";
 import { formNum, formStr } from "@/lib/validate";
 
-function readProduct(fd: FormData) {
+function readProduct(fd: FormData, t: (k: Key) => string) {
   const name = formStr(fd.get("name"));
   const unit = String(fd.get("unit") ?? "kg");
   const price = formNum(fd.get("price"));
-  if (!name) return { error: "Name is required / नाम ज़रूरी है" } as const;
-  if (!UNITS[unit]) return { error: "Invalid unit" } as const;
-  if (price === null || price < 0) return { error: "Enter a valid price / सही भाव डालें" } as const;
+  if (!name) return { error: t("errNameRequired") } as const;
+  if (!UNITS[unit]) return { error: t("errUnit") } as const;
+  if (price === null || price < 0) return { error: t("errPrice") } as const;
   const cost = formNum(fd.get("cost_price"));
   return {
     data: {
@@ -32,7 +34,8 @@ function readProduct(fd: FormData) {
 
 export async function createProduct(_: ActionResult, fd: FormData): Promise<ActionResult> {
   const me = await requireOwner();
-  const r = readProduct(fd);
+  const { t } = await getT();
+  const r = readProduct(fd, t);
   if ("error" in r) return { error: r.error };
   const p = r.data;
   const opening = round3(formNum(fd.get("stock")) ?? 0);
@@ -50,12 +53,13 @@ export async function createProduct(_: ActionResult, fd: FormData): Promise<Acti
 export async function updateProduct(_: ActionResult, fd: FormData): Promise<ActionResult> {
   const me = await requireOwner();
   const id = Number(fd.get("id"));
-  const r = readProduct(fd);
+  const { t } = await getT();
+  const r = readProduct(fd, t);
   if ("error" in r) return { error: r.error };
   const p = r.data;
   const active = fd.get("active") === "on";
   const [old] = await sql`SELECT * FROM products WHERE id = ${id}`;
-  if (!old) return { error: "Not found" };
+  if (!old) return { error: t("errNotFound") };
   await sql.transaction([
     sql`UPDATE products SET name = ${p.name}, name_hi = ${p.name_hi}, category = ${p.category}, unit = ${p.unit}, price = ${p.price},
         cost_price = ${p.cost_price}, low_stock_at = ${p.low_stock_at}, active = ${active}, updated_at = now() WHERE id = ${id}`,
@@ -66,12 +70,13 @@ export async function updateProduct(_: ActionResult, fd: FormData): Promise<Acti
   ]);
   revalidatePath("/products");
   revalidatePath(`/products/${id}`);
-  return { ok: "✓ Saved / सेव हो गया" };
+  return { ok: `✓ ${t("saved")}` };
 }
 
 /** Bulk price update from the price list page; fields are named price_<id>. */
 export async function updatePrices(_: ActionResult, fd: FormData): Promise<ActionResult> {
   const me = await requireOwner();
+  const { t } = await getT();
   const wanted = new Map<number, number>();
   for (const [k, v] of fd.entries()) {
     if (!k.startsWith("price_")) continue;
@@ -79,10 +84,10 @@ export async function updatePrices(_: ActionResult, fd: FormData): Promise<Actio
     if (n === null || n < 0) continue;
     wanted.set(Number(k.slice(6)), round2(n));
   }
-  if (!wanted.size) return { ok: "No changes" };
+  if (!wanted.size) return { ok: t("noChanges") };
   const current = await sql`SELECT id, name, price FROM products WHERE id = ANY(${[...wanted.keys()]})`;
   const changes = current.filter((c) => num(c.price) !== wanted.get(c.id));
-  if (!changes.length) return { ok: "No changes / कोई बदलाव नहीं" };
+  if (!changes.length) return { ok: t("noChanges") };
   await sql.transaction(
     changes.flatMap((c) => {
       const np = wanted.get(c.id)!;
@@ -94,14 +99,15 @@ export async function updatePrices(_: ActionResult, fd: FormData): Promise<Actio
     }),
   );
   revalidatePath("/products");
-  return { ok: `✓ ${changes.length} price(s) updated / भाव बदले गए` };
+  return { ok: `✓ ${changes.length} ${t("pricesUpdated")}` };
 }
 
 export async function stockIn(_: ActionResult, fd: FormData): Promise<ActionResult> {
   const me = await requireUser();
+  const { t } = await getT();
   const id = Number(fd.get("id"));
   const q = formNum(fd.get("qty"));
-  if (q === null || q <= 0) return { error: "Enter quantity / मात्रा डालें" };
+  if (q === null || q <= 0) return { error: t("errQty") };
   const qty = round3(q);
   const cost = formNum(fd.get("cost_price"));
   const note = formStr(fd.get("note"));
@@ -117,12 +123,13 @@ export async function stockIn(_: ActionResult, fd: FormData): Promise<ActionResu
 
 export async function adjustStock(_: ActionResult, fd: FormData): Promise<ActionResult> {
   const me = await requireOwner();
+  const { t } = await getT();
   const id = Number(fd.get("id"));
   const counted = formNum(fd.get("counted"));
-  if (counted === null) return { error: "Enter counted stock" };
+  if (counted === null) return { error: t("errCounted") };
   const [p] = await sql`SELECT stock FROM products WHERE id = ${id}`;
   const diff = round3(counted - num(p.stock));
-  if (diff === 0) return { ok: "No change / कोई बदलाव नहीं" };
+  if (diff === 0) return { ok: t("noChanges") };
   const note = formStr(fd.get("note"));
   await sql.transaction([
     sql`UPDATE products SET stock = stock + ${diff}, updated_at = now() WHERE id = ${id}`,

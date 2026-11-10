@@ -4,13 +4,13 @@ import { useState, useTransition } from "react";
 import readXlsxFile from "read-excel-file";
 import { applyRateUpload, previewRateUpload, type RateRow, type UploadPlan } from "@/app/actions/upload";
 import { money } from "@/lib/format";
-import { translator, type Lang } from "@/lib/i18n";
+import { translator, type Key, type Lang } from "@/lib/i18n";
 import { parseCsv, sheetToRows } from "@/lib/sheet";
 
-const FIELD: Record<string, string> = { price: "₹", name: "Name", name_hi: "हिंदी", unit: "Unit", cost_price: "Cost", category: "Category" };
 
 export function RateUpload({ lang }: { lang: Lang }) {
   const t = translator(lang);
+  const FIELD: Record<string, string> = { price: t("price"), name: t("name"), name_hi: t("nameHi"), unit: t("unit"), cost_price: t("costPrice"), category: t("category") };
   const [rows, setRows] = useState<RateRow[] | null>(null);
   const [fileName, setFileName] = useState("");
   const [createNew, setCreateNew] = useState(true);
@@ -31,7 +31,8 @@ export function RateUpload({ lang }: { lang: Lang }) {
       start(async () => setPlan(await previewRateUpload(parsed, createNew)));
     } catch (e) {
       setRows(null);
-      setError(e instanceof Error ? e.message : String(e));
+      const m = e instanceof Error ? e.message : String(e);
+      setError(m.startsWith("err") ? t(m as Key) : m);
     }
   }
 
@@ -94,7 +95,7 @@ export function RateUpload({ lang }: { lang: Lang }) {
               <h2 className="h2 mb-2 text-red-700">⚠ {t("skipped")}</h2>
               {plan.errors.map((e, i) => (
                 <div key={i} className="py-0.5">
-                  Row {e.row}: {e.message}
+                  {t("row")} {e.row}: {e.message}
                 </div>
               ))}
             </section>

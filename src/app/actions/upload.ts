@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { requireOwner } from "@/lib/auth";
 import { auditQuery, num, round2, sql } from "@/lib/db";
 import { toHindi } from "@/lib/hindi";
+import type { Key } from "@/lib/i18n";
+import { getT } from "@/lib/lang";
 
 /** One spreadsheet row after header mapping. Empty cells are null and mean "leave as is". */
 export type RateRow = {
@@ -42,7 +44,7 @@ function normUnit(u: string | null): string | null | undefined {
   return UNIT_ALIASES[u.trim().toLowerCase()]; // undefined = unknown unit
 }
 
-async function makePlan(rows: RateRow[], createNew: boolean): Promise<{ plan: UploadPlan; final: Product[] }> {
+async function makePlan(rows: RateRow[], createNew: boolean, t: (k: Key) => string): Promise<{ plan: UploadPlan; final: Product[] }> {
   const existing = (await sql`SELECT id, name, name_hi, unit, price, cost_price, category FROM products`).map(
     (p): Product => ({ id: p.id, name: p.name, name_hi: p.name_hi, unit: p.unit, price: num(p.price), cost_price: p.cost_price === null ? null : num(p.cost_price), category: p.category }),
   );
@@ -57,22 +59,22 @@ async function makePlan(rows: RateRow[], createNew: boolean): Promise<{ plan: Up
     const rowNo = i + 2; // row 1 is the header
     const name = r.name?.trim() || null;
     if (!name && !r.id) {
-      if (r.price !== null || r.name_hi) plan.errors.push({ row: rowNo, message: "Name missing / नाम नहीं है" });
+      if (r.price !== null || r.name_hi) plan.errors.push({ row: rowNo, message: t("errRowName") });
       return;
     }
     if (r.price !== null && (!Number.isFinite(r.price) || r.price < 0)) {
-      plan.errors.push({ row: rowNo, message: `Wrong price / गलत भाव: ${r.price}` });
+      plan.errors.push({ row: rowNo, message: `${t("errRowPrice")}: ${r.price}` });
       return;
     }
     const unit = normUnit(r.unit);
     if (unit === undefined) {
-      plan.errors.push({ row: rowNo, message: `Unknown unit / इकाई समझ नहीं आई: ${r.unit}` });
+      plan.errors.push({ row: rowNo, message: `${t("errRowUnit")}: ${r.unit}` });
       return;
     }
     const match = (r.id && byId.get(r.id)) || (name ? byName.get(name.toLowerCase()) : undefined);
     const key = match ? `id:${match.id}` : `name:${name!.toLowerCase()}`;
     if (seen.has(key)) {
-      plan.errors.push({ row: rowNo, message: `Repeated product / दोबारा लिखा है: ${name ?? r.id}` });
+      plan.errors.push({ row: rowNo, message: `${t("errRowRepeat")}: ${name ?? r.id}` });
       return;
     }
     seen.add(key);
@@ -99,15 +101,15 @@ async function makePlan(rows: RateRow[], createNew: boolean): Promise<{ plan: Up
     }
 
     if (r.id) {
-      plan.errors.push({ row: rowNo, message: `ID ${r.id} not found / नहीं मिला` });
+      plan.errors.push({ row: rowNo, message: `${t("errRowId")}: ${r.id}` });
       return;
     }
     if (!createNew) {
-      plan.errors.push({ row: rowNo, message: `New product skipped / नया सामान छोड़ा: ${name}` });
+      plan.errors.push({ row: rowNo, message: `${t("errRowSkipNew")}: ${name}` });
       return;
     }
     if (r.price === null) {
-      plan.errors.push({ row: rowNo, message: `Price missing for new product / भाव नहीं है: ${name}` });
+      plan.errors.push({ row: rowNo, message: `${t("errRowNoPrice")}: ${name}` });
       return;
     }
     plan.creates.push({
@@ -122,20 +124,22 @@ async function makePlan(rows: RateRow[], createNew: boolean): Promise<{ plan: Up
   return { plan, final };
 }
 
-function clean(rows: RateRow[]): RateRow[] {
-  if (!Array.isArray(rows) || rows.length > 5000) throw new Error("Too many rows (max 5000)");
+function clean(rows: RateRow[], t: (k: Key) => string): RateRow[] {
+  if (!Array.isArray(rows) || rows.length > 5000) throw new Error(t("errTooMany"));
   return rows;
 }
 
 export async function previewRateUpload(rows: RateRow[], createNew: boolean): Promise<UploadPlan> {
   await requireOwner();
-  return (await makePlan(clean(rows), createNew)).plan;
+  const { t } = await getT();
+  return (await makePlan(clean(rows, t), createNew, t)).plan;
 }
 
 /** Re-plans on the server (the preview is never trusted) and applies everything in one transaction. */
 export async function applyRateUpload(rows: RateRow[], createNew: boolean): Promise<{ updated: number; created: number; errors: number }> {
   const me = await requireOwner();
-  const { plan, final } = await makePlan(clean(rows), createNew);
+  const { t } = await getT();
+  const { plan, final } = await makePlan(clean(rows, t), createNew, t);
   const upd = JSON.stringify(final);
   const ins = JSON.stringify(plan.creates);
   const priceChanges = plan.updates.filter((u) => u.changes.some((c) => c.field === "price")).length;

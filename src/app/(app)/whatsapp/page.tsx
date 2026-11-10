@@ -9,7 +9,7 @@ import { getT } from "@/lib/lang";
 
 export default async function WhatsAppPage({ searchParams }: { searchParams: Promise<{ all?: string }> }) {
   const { all } = await searchParams;
-  const { t } = await getT();
+  const { lang, t } = await getT();
   const rows = all
     ? await sql`SELECT w.*, b.bill_no FROM wa_messages w LEFT JOIN bills b ON b.id = w.bill_id ORDER BY w.id DESC LIMIT 100`
     : await sql`SELECT w.*, NULL AS bill_no FROM wa_messages w WHERE status = 'new' ORDER BY w.id`;
@@ -31,7 +31,7 @@ export default async function WhatsAppPage({ searchParams }: { searchParams: Pro
             <span className="font-semibold">
               {m.from_name ?? "—"} {m.from_phone}
             </span>
-            <span className="muted">{dateTime(m.received_at)}</span>
+            <span className="muted">{dateTime(m.received_at, lang)}</span>
           </div>
           <p className="my-2 whitespace-pre-wrap">{m.body}</p>
           {m.status === "new" ? (

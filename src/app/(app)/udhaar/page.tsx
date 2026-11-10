@@ -4,7 +4,7 @@ import { date, money } from "@/lib/format";
 import { getT } from "@/lib/lang";
 
 export default async function UdhaarPage() {
-  const { t } = await getT();
+  const { lang, t } = await getT();
   const rows = await sql`
     SELECT c.id, c.name, c.phone, c.area, sum(l.amount) AS due, max(l.created_at) FILTER (WHERE l.kind = 'payment') AS last_paid
     FROM customers c JOIN ledger l ON l.customer_id = c.id
@@ -25,7 +25,7 @@ export default async function UdhaarPage() {
               <div className="font-semibold">{c.name}</div>
               <div className="muted">
                 {[c.phone, c.area].filter(Boolean).join(" · ")}
-                {c.last_paid && ` · ${t("paid")}: ${date(c.last_paid)}`}
+                {c.last_paid && ` · ${t("paid")}: ${date(c.last_paid, lang)}`}
               </div>
             </div>
             <div className="font-bold text-red-600">{money(c.due)}</div>

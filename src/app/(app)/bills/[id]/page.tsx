@@ -30,7 +30,7 @@ export default async function BillPage({ params, searchParams }: { params: Promi
     <div className="space-y-4">
       {created && (
         <p className="flex items-center justify-center gap-2 rounded-2xl bg-green-600 p-3 font-semibold text-white">
-          <Icon name="check" size={20} /> {t("billNo")} {b.bill_no} — saved / सेव हो गया
+          <Icon name="check" size={20} /> {t("billNo")} {b.bill_no} — {t("saved")}
         </p>
       )}
       <div className="card">
@@ -40,7 +40,7 @@ export default async function BillPage({ params, searchParams }: { params: Promi
               {t("billNo")} {b.bill_no}
             </h1>
             <p className="muted">
-              {dateTime(b.created_at)} · {t("createdBy")}: {b.created_by_name}
+              {dateTime(b.created_at, lang)} · {t("createdBy")}: {b.created_by_name}
             </p>
           </div>
           <StatusBadge status={b.status} t={t} />
@@ -66,7 +66,7 @@ export default async function BillPage({ params, searchParams }: { params: Promi
           {b.notes && <p className="text-sm">{b.notes}</p>}
           {b.delivered_at && (
             <p className="flex items-center gap-1.5 text-sm font-semibold text-green-700">
-              <Icon name="check" size={17} /> {t("deliveredBy")}: {b.delivered_by_name} · {dateTime(b.delivered_at)}
+              <Icon name="check" size={17} /> {t("deliveredBy")}: {b.delivered_by_name} · {dateTime(b.delivered_at, lang)}
             </p>
           )}
         </div>

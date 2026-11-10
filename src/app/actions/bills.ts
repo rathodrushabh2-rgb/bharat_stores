@@ -5,6 +5,7 @@ import { after } from "next/server";
 import { requireOwner, requireUser } from "@/lib/auth";
 import { auditQuery, getSettings, num, round2, round3, sql } from "@/lib/db";
 import { hiName } from "@/lib/i18n";
+import { getT } from "@/lib/lang";
 import { lineAmount, ruleFromSettings, smallQtyExtra } from "@/lib/pricing";
 import { notify } from "@/lib/push";
 
@@ -52,13 +53,14 @@ const LAST_BILL = sql.unsafe("currval(pg_get_serial_sequence('bills', 'id'))");
 export async function createBill(input: BillInput): Promise<{ error: string } | { id: number }> {
   const me = await requireUser();
   const isOwner = me.role === "owner";
+  const { t } = await getT();
   const settings = await getSettings();
   const canEditRate = isOwner || settings.staff_can_edit_rate === "1";
   const rule = ruleFromSettings(settings);
 
   const lines = input.items.filter((i) => i.qty > 0);
-  if (!lines.length) return { error: "Add at least one item / कम से कम एक सामान जोड़ें" };
-  if (!["cash", "upi", "credit", "partial"].includes(input.paymentMode)) return { error: "Invalid payment" };
+  if (!lines.length) return { error: t("errNoItems") };
+  if (!["cash", "upi", "credit", "partial"].includes(input.paymentMode)) return { error: t("errPayment") };
 
   const products = await sql`SELECT id, name, name_hi, unit, price FROM products WHERE id = ANY(${lines.map((l) => l.productId)})`;
   const byId = new Map(products.map((p) => [p.id, p]));
@@ -67,9 +69,9 @@ export async function createBill(input: BillInput): Promise<{ error: string } | 
   const items = [];
   for (const l of lines) {
     const p = byId.get(l.productId);
-    if (!p) return { error: "Product not found" };
+    if (!p) return { error: t("errProduct") };
     const qty = round3(Number(l.qty));
-    if (!(qty > 0)) return { error: `Wrong quantity for ${p.name}` };
+    if (!(qty > 0)) return { error: `${t("errWrongQty")} ${p.name}` };
     const listPrice = num(p.price);
     const wanted = Number.isFinite(l.price) && l.price >= 0 ? round2(l.price) : listPrice;
     const base = canEditRate || wanted === lastRates[p.id]?.price ? wanted : listPrice;
@@ -94,7 +96,7 @@ export async function createBill(input: BillInput): Promise<{ error: string } | 
       break;
     case "partial":
       paid = round2(Number(input.paid) || 0);
-      if (paid <= 0 || paid >= total) return { error: "Part payment must be more than 0 and less than total" };
+      if (paid <= 0 || paid >= total) return { error: t("errPartial") };
   }
 
   // Customer: existing, new, or walk-in.
@@ -111,10 +113,10 @@ export async function createBill(input: BillInput): Promise<{ error: string } | 
     }
   }
   if (!customerId && (input.paymentMode === "credit" || input.paymentMode === "partial")) {
-    return { error: "उधार / थोड़ा जमा के लिए ग्राहक चुनें / Choose a customer for udhaar" };
+    return { error: t("creditNeedsCustomer") };
   }
   const [cust] = customerId ? await sql`SELECT id, name, phone, address FROM customers WHERE id = ${customerId}` : [null];
-  if (customerId && !cust) return { error: "Customer not found" };
+  if (customerId && !cust) return { error: t("errCustomer") };
 
   const itemsJson = JSON.stringify(items);
   const source = input.waMessageId ? "whatsapp" : "shop";
@@ -173,7 +175,7 @@ export async function createBill(input: BillInput): Promise<{ error: string } | 
     notify(
       {
         title: `नया ऑर्डर #${bill.bill_no} / New order`,
-        body: `${cust?.name ?? "नकद ग्राहक"} · ₹${total} · ${items.length} सामान${delivery === "home" ? " · घर पहुँचाना" : ""}`,
+        body: `${cust?.name ?? "नकद ग्राहक / Walk-in"} · ₹${total} · ${items.length} सामान / items${delivery === "home" ? " · घर पहुँचाना / Home delivery" : ""}`,
         url: `/bills/${bill.id}`,
         tag: `bill-${bill.id}`,
       },

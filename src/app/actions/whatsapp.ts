@@ -1,5 +1,6 @@
 "use server";
 
+import { getT } from "@/lib/lang";
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/components/ActionForm";
 import { requireUser } from "@/lib/auth";
@@ -8,12 +9,13 @@ import { formStr } from "@/lib/validate";
 
 export async function addWaMessage(_: ActionResult, fd: FormData): Promise<ActionResult> {
   const me = await requireUser();
+  const { t } = await getT();
   const body = formStr(fd.get("body"));
-  if (!body) return { error: "Write the order / ऑर्डर लिखें" };
+  if (!body) return { error: t("errOrderText") };
   const [row] = await sql`INSERT INTO wa_messages (from_phone, from_name, body) VALUES (${formStr(fd.get("phone"))}, ${formStr(fd.get("name"))}, ${body}) RETURNING id`;
   await auditQuery(me.id, "wa_manual_add", "wa_message", row.id);
   revalidatePath("/whatsapp");
-  return { ok: "✓" };
+  return { ok: `✓ ${t("saved")}` };
 }
 
 export async function setWaStatus(id: number, status: "ignored" | "new") {

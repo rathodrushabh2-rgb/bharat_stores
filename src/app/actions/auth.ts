@@ -1,5 +1,6 @@
 "use server";
 
+import { getT } from "@/lib/lang";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -15,12 +16,13 @@ const LOCK_MINUTES = 15;
 export async function login(_: ActionResult, fd: FormData): Promise<ActionResult> {
   const username = String(fd.get("username") ?? "").trim().toLowerCase();
   const pin = String(fd.get("pin") ?? "");
+  const { t } = await getT();
   const rows = await sql`SELECT id, name, role, pin_hash, active, failed_logins, locked_until FROM users WHERE username = ${username}`;
   const u = rows[0];
-  const wrong = { error: "गलत यूज़रनेम या पिन / Wrong username or PIN" };
+  const wrong = { error: t("errLogin") };
   if (!u || !u.active) return wrong;
   if (u.locked_until && new Date(u.locked_until) > new Date()) {
-    return { error: `बहुत बार गलत पिन। ${LOCK_MINUTES} मिनट बाद कोशिश करें / Too many wrong PINs, try again later` };
+    return { error: t("errLocked") };
   }
   if (!(await bcrypt.compare(pin, u.pin_hash))) {
     const fails = u.failed_logins + 1;
@@ -44,12 +46,14 @@ export async function logout() {
 }
 
 export async function setupOwner(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const { t } = await getT();
   const name = String(fd.get("name") ?? "").trim();
   const username = String(fd.get("username") ?? "").trim().toLowerCase();
   const pin = String(fd.get("pin") ?? "");
-  if (!name || !validUsername(username)) return { error: "Username: 3-20 letters/numbers, no spaces" };
-  if (!validPin(pin)) return { error: "PIN must be 4 to 6 digits" };
-  if (pin !== fd.get("pin2")) return { error: "PINs do not match" };
+  if (!name) return { error: t("errNameRequired") };
+  if (!validUsername(username)) return { error: t("errUsername") };
+  if (!validPin(pin)) return { error: t("errPin") };
+  if (pin !== fd.get("pin2")) return { error: t("errPinMatch") };
   const hash = await bcrypt.hash(pin, 10);
   // Only allowed while there are no users at all.
   const rows = await sql`INSERT INTO users (name, username, pin_hash, role)
@@ -67,12 +71,13 @@ export async function setLang(lang: string) {
 
 export async function changeMyPin(_: ActionResult, fd: FormData): Promise<ActionResult> {
   const me = await requireUser();
+  const { t } = await getT();
   const oldPin = String(fd.get("old") ?? "");
   const pin = String(fd.get("pin") ?? "");
   const rows = await sql`SELECT pin_hash FROM users WHERE id = ${me.id}`;
-  if (!(await bcrypt.compare(oldPin, rows[0].pin_hash))) return { error: "Old PIN is wrong / पुराना पिन गलत है" };
-  if (!validPin(pin)) return { error: "PIN must be 4 to 6 digits" };
+  if (!(await bcrypt.compare(oldPin, rows[0].pin_hash))) return { error: t("errOldPin") };
+  if (!validPin(pin)) return { error: t("errPin") };
   await sql`UPDATE users SET pin_hash = ${await bcrypt.hash(pin, 10)} WHERE id = ${me.id}`;
   await auditQuery(me.id, "change_pin", "user", me.id);
-  return { ok: "✓" };
+  return { ok: `✓ ${t("saved")}` };
 }

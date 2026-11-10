@@ -5,7 +5,7 @@ import { NameFields } from "./NameFields";
 export function ProductFields({ p, t, lang, isNew }: { p?: Row; t: (k: Key) => string; lang: Lang; isNew?: boolean }) {
   return (
     <div className="grid grid-cols-2 gap-3">
-      <NameFields name={p?.name ?? ""} nameHi={p?.name_hi ?? ""} labels={{ name: t("name"), nameHi: t("nameHi"), auto: t("autoTranslated") }} />
+      <NameFields name={p?.name ?? ""} nameHi={p?.name_hi ?? ""} labels={{ name: t("name"), nameHi: t("nameHi"), auto: t("autoTranslated"), translate: t("translateAgain") }} />
       <div>
         <label className="label">{t("price")} (₹) *</label>
         <input name="price" type="number" step="0.01" min="0" inputMode="decimal" className="input" defaultValue={p?.price} required />

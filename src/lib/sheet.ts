@@ -56,13 +56,14 @@ function toNum(v: unknown): number | null {
 
 /** Turns a sheet (first row = headers) into rate rows. Throws if no name/price column is found. */
 export function sheetToRows(sheet: unknown[][]): RateRow[] {
-  if (!sheet.length) throw new Error("File is empty / फ़ाइल खाली है");
+  if (!sheet.length) throw new Error("errFileEmpty");
   const header = sheet[0].map((h) => String(h ?? "").trim().toLowerCase());
   const col = Object.fromEntries(
     (Object.keys(HEADERS) as (keyof RateRow)[]).map((k) => [k, header.findIndex((h) => HEADERS[k].includes(h))]),
   ) as Record<keyof RateRow, number>;
-  if (col.name < 0 && col.id < 0) throw new Error('No "Name" column found / "Name" कॉलम नहीं मिला');
-  if (col.price < 0) throw new Error('No "Price" column found / "Price" कॉलम नहीं मिला');
+  // Errors are dictionary keys; the screen translates them.
+  if (col.name < 0 && col.id < 0) throw new Error("errNoNameCol");
+  if (col.price < 0) throw new Error("errNoPriceCol");
   const get = (r: unknown[], k: keyof RateRow) => (col[k] >= 0 ? r[col[k]] : null);
   const str = (v: unknown) => (v === null || v === undefined || String(v).trim() === "" ? null : String(v).trim());
   return sheet.slice(1).map((r) => {

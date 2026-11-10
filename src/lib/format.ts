@@ -10,14 +10,17 @@ export function qty(v: number | string | null | undefined) {
   return n.toLocaleString("en-IN", { maximumFractionDigits: 3 });
 }
 
-export function dateTime(v: string | Date | null | undefined) {
+const locale = (lang?: string) => (lang === "hi" ? "hi-IN" : "en-IN");
+
+export function dateTime(v: string | Date | null | undefined, lang?: string) {
   if (!v) return "";
-  return new Date(v).toLocaleString("en-IN", { timeZone: TZ, day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: true });
+  // Hindi uses 24-hour time (15:20) so no English "am/pm" appears.
+  return new Date(v).toLocaleString(locale(lang), { timeZone: TZ, day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: lang !== "hi" });
 }
 
-export function date(v: string | Date | null | undefined) {
+export function date(v: string | Date | null | undefined, lang?: string) {
   if (!v) return "";
-  return new Date(v).toLocaleDateString("en-IN", { timeZone: TZ, day: "2-digit", month: "short", year: "numeric" });
+  return new Date(v).toLocaleDateString(locale(lang), { timeZone: TZ, day: "2-digit", month: "short", year: "numeric" });
 }
 
 /** Digits only, with the 91 country code, for wa.me links. */

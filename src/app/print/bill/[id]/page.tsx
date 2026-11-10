@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { getSettings, num, sql } from "@/lib/db";
 import { dateTime, money } from "@/lib/format";
 import { hiName, qtyUnit, translator, type Key } from "@/lib/i18n";
+import { getLang } from "@/lib/lang";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function PrintBill({ params, searchParams }: { params: Prom
   return (
     <div className="min-h-screen bg-[#E8EAE2] py-2 print:bg-white print:py-0">
       <style>{`@page { size: ${pageSize}; margin: ${small ? "2mm" : "8mm"}; }`}</style>
-      <PrintControls id={id} size={size} explicit={explicit} />
+      <PrintControls id={id} size={size} explicit={explicit} lang={await getLang()} />
       {size === "a4x2" ? (
         <div className="mx-auto" style={{ width: WIDTH[size] }}>
           {copy(bi("customerCopy"))}

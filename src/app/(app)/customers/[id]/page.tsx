@@ -14,7 +14,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
   const id = Number((await params).id);
   if (!Number.isInteger(id)) notFound();
   const user = await requireUser();
-  const { t } = await getT();
+  const { lang, t } = await getT();
   const [[c], ledger, settings] = await Promise.all([
     sql`SELECT * FROM customers WHERE id = ${id}`,
     sql`SELECT l.*, u.name AS by, b.bill_no FROM ledger l LEFT JOIN users u ON u.id = l.created_by LEFT JOIN bills b ON b.id = l.bill_id
@@ -32,7 +32,10 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
     payment: { icon: "check", tint: "bg-green-50 text-green-600" },
     adjust: { icon: "book", tint: "bg-purple-50 text-purple-600" },
   };
-  const reminder = `नमस्ते ${c.name} जी,\n${settings.shop_name_hi || settings.shop_name} में आपका बकाया ₹${due} है। कृपया जल्द जमा करें। धन्यवाद 🙏`;
+  // Sent to the customer: Hindi first, then English (like the bill).
+  const reminder =
+    `नमस्ते ${c.name} जी,\n${settings.shop_name_hi || settings.shop_name} में आपका बकाया ₹${due} है। कृपया जल्द जमा करें। धन्यवाद 🙏\n\n` +
+    `Dear ${c.name}, your balance at ${settings.shop_name || settings.shop_name_hi} is ₹${due}. Please pay at the earliest. Thank you.`;
 
   return (
     <div className="space-y-4">
@@ -50,13 +53,13 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
           <div>
             <div className="text-[15px] font-medium">{t("balance")}</div>
             <div className="amount text-[38px] font-extrabold leading-none">{money(Math.abs(due))}</div>
-            {due < 0 && <div className="text-sm">(advance / एडवांस)</div>}
+            {due < 0 && <div className="text-sm">({t("advance")})</div>}
           </div>
           {lastPayment && (
             <div className="text-right text-sm">
               {t("lastPaid")}
               <br />
-              {date(lastPayment.created_at)}
+              {date(lastPayment.created_at, lang)}
             </div>
           )}
         </div>
@@ -91,7 +94,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
           )}
           {c.phone ? (
             <a href={`tel:${c.phone}`} className="btn-secondary btn-sm min-h-[48px]">
-              <Icon name="phone" size={18} /> Call
+              <Icon name="phone" size={18} /> {t("call")}
             </a>
           ) : (
             <span />
@@ -120,7 +123,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
                     {l.mode ? ` · ${t(l.mode as Key)}` : ""}
                   </span>
                   <span className="block truncate text-[13px] text-muted">
-                    {dateTime(l.created_at)} · {l.by}
+                    {dateTime(l.created_at, lang)} · {l.by}
                     {l.note ? ` · ${l.note}` : ""}
                   </span>
                 </span>

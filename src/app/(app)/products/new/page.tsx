@@ -13,7 +13,7 @@ export default async function NewProductPage({ searchParams }: { searchParams: P
   return (
     <div className="space-y-3">
       <h1 className="h1">{t("addProduct")}</h1>
-      {added && <p className="rounded-lg bg-green-50 p-2 text-sm text-green-700">✓ Saved / सेव हो गया</p>}
+      {added && <p className="rounded-lg bg-green-50 p-2 text-sm text-green-700">✓ {t("saved")}</p>}
       <ActionForm action={createProduct} className="card space-y-4">
         <ProductFields t={t} lang={lang} isNew />
         <datalist id="categories">

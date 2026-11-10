@@ -3,18 +3,20 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { translator, type Lang } from "@/lib/i18n";
 
 const SIZES = [
   { key: "58", label: "58mm" },
   { key: "80", label: "80mm" },
   { key: "a5", label: "A5" },
   { key: "a4", label: "A4" },
-  { key: "a4x2", label: "A4 · 2 कॉपी" },
+  { key: "a4x2", label: "" },
 ];
 const KEY = "bs_print_size";
 
 /** Size picker; remembers the last size on this device so the shop printer's size is the default. */
-export function PrintControls({ id, size, explicit }: { id: number; size: string; explicit: boolean }) {
+export function PrintControls({ id, size, explicit, lang }: { id: number; size: string; explicit: boolean; lang: Lang }) {
+  const t = translator(lang);
   const router = useRouter();
   useEffect(() => {
     if (explicit) return;
@@ -34,15 +36,15 @@ export function PrintControls({ id, size, explicit }: { id: number; size: string
   return (
     <div className="no-print mx-auto mb-4 flex max-w-md flex-wrap items-center gap-2 p-3">
       <Link href={`/bills/${id}`} className="btn-secondary btn-sm">
-        ← Back
+        ← {t("back")}
       </Link>
       {SIZES.map((s) => (
         <button key={s.key} onClick={() => pick(s.key)} className={`btn btn-sm ${s.key === size ? "bg-ink text-white" : "bg-white ring-1 ring-inset ring-line"}`}>
-          {s.label}
+          {s.label || t("printCopies")}
         </button>
       ))}
       <button onClick={() => window.print()} className="btn-primary btn-sm ml-auto">
-        Print / प्रिंट
+        {t("print")}
       </button>
     </div>
   );

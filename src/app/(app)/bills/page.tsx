@@ -71,7 +71,7 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
                 <div className="truncate text-[17px] font-semibold">{b.cust_name ?? t("walkIn")}</div>
                 <div className="truncate text-sm text-muted">
                   {b.cust_address ? `${b.cust_address} · ` : ""}
-                  {dateTime(b.created_at)}
+                  {dateTime(b.created_at, lang)}
                   {b.source === "whatsapp" ? " · WhatsApp" : ""}
                 </div>
               </div>
