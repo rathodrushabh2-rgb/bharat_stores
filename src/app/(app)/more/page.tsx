@@ -16,6 +16,7 @@ export default async function MorePage() {
   const items: { href: string; label: string; icon: IconName; tint: string; badge?: number; show: boolean }[] = [
     { href: "/udhaar", label: t("udhaarList"), icon: "book", tint: "bg-red-50 text-red-600", show: true },
     { href: "/whatsapp", label: t("whatsappInbox"), icon: "chat", tint: "bg-green-50 text-green-600", badge: n, show: true },
+    { href: "/calculator", label: t("calcTitle"), icon: "scale", tint: "bg-amber-50 text-amber-700", show: true },
     { href: "/products/prices", label: t("priceList"), icon: "tag", tint: "bg-purple-50 text-purple-600", show: owner },
     { href: "/products/upload", label: t("uploadRates"), icon: "upload", tint: "bg-blue-50 text-blue-600", show: owner },
     { href: "/audit", label: t("auditLog"), icon: "shield", tint: "bg-amber-50 text-amber-700", show: owner },

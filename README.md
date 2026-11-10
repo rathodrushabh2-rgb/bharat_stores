@@ -21,6 +21,7 @@ Works on any phone browser (Hindi + English) and can be added to the home screen
 | **Grams** | On a bill, tap **ग्राम** next to a KG item and type 300 for 300 g (same for ml). |
 | **"₹30 ki cheeni"** | Tap **₹** next to a KG item and type the money; the weight is worked out. |
 | **Small quantity charge** | KG items of 250 g or less cost ₹4/kg more (both changeable in Settings). Applies to "by ₹" too. |
+| **Price & weight calculator** | Home → **कैलकुलेटर** (or menu). Pick a product (or type any rate): **₹ → वज़न** tells how much to weigh for an amount, **वज़न → ₹** tells the price for a weight. Uses the same small-quantity charge as bills; a ready table shows common amounts. Changes nothing. |
 | **Change a line amount** | Type a different amount in the line's ₹ box (owner; staff only if allowed). The weight stays the same; it is marked and logged. |
 | **Special rates** | On a bill, the rate box can be changed (owner; staff only if allowed in Settings). **पुराने भाव लगाएं** uses the rate this customer paid on their most recent bill for each item. |
 | **Goods arrive** | Products → item → **माल आया** → quantity. |

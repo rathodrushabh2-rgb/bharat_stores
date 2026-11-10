@@ -29,6 +29,7 @@ export default async function Dashboard() {
   const actions: { href: string; label: string; icon: IconName; tint: string }[] = [
     { href: "/bills/new", label: t("newBill"), icon: "plus", tint: "bg-brand-100 text-brand-600" },
     { href: "/udhaar", label: t("qaPayment"), icon: "cash", tint: "bg-green-50 text-green-600" },
+    { href: "/calculator", label: t("calculator"), icon: "scale", tint: "bg-amber-50 text-amber-700" },
     { href: "/products", label: t("qaStock"), icon: "box", tint: "bg-blue-50 text-blue-600" },
     user.role === "owner"
       ? { href: "/products/prices", label: t("qaPrices"), icon: "tag", tint: "bg-purple-50 text-purple-600" }
@@ -59,13 +60,13 @@ export default async function Dashboard() {
       </section>
 
       {/* Quick actions */}
-      <section className="grid grid-cols-4 gap-2.5">
+      <section className="grid grid-cols-5 gap-2">
         {actions.map((a) => (
-          <Link key={a.href} href={a.href} className="flex flex-col items-center gap-2 rounded-[20px] bg-white px-1 py-3.5 active:scale-95">
+          <Link key={a.href} href={a.href} className="flex flex-col items-center gap-2 rounded-[18px] bg-white px-0.5 py-3 active:scale-95">
             <span className={`flex h-11 w-11 items-center justify-center rounded-[14px] ${a.tint}`}>
               <Icon name={a.icon} />
             </span>
-            <span className="text-center text-[13px] font-semibold leading-tight">{a.label}</span>
+            <span className="text-center text-[12px] font-semibold leading-tight">{a.label}</span>
           </Link>
         ))}
       </section>
